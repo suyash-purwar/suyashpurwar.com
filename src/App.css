@@ -1,8 +1,0 @@
-#root {
-  margin: 0;
-  padding: 0;
-}
-
-div[data-testid="studio-layout"] {
-  height: 100vh;
-}
