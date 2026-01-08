@@ -1,0 +1,37 @@
+---
+title: "Why Your Eyes Need Dark Mode: Benefits and Best Practices"
+date: "2026-01-01"
+description: "This is my first blog"
+---
+
+# 🌑 Embracing the Shadows: The Case for Dark Mode
+
+The sudden shift in default themes across every major operating system and application wasn't just a trend—it was a response to how we use screens today. Dark Mode has officially arrived.
+
+## 1. The Science of Eye Strain
+
+Studies suggest that high screen brightness against a light background (light mode) can contribute to digital eye strain. We look at:
+* **Blue Light Exposure:** How dark mode can reduce the perceived intensity of blue light.
+* **Pupil Size:** Why smaller pupils, often achieved in dark mode, can lead to sharper focus.
+
+## 2. Real-World Benefits for Users
+
+* **Battery Life:** Particularly on devices with **OLED/AMOLED screens**, where black pixels are truly off, dark mode can significantly conserve power. 
+* **Improved Focus:** Many users report less distraction from peripheral vision when the background is muted.
+
+## 3. How to Implement it on Your Website
+
+For developers, offering a Dark Mode switch is easier than ever with modern CSS and Tailwind CSS.
+
+### CSS Technique: `prefers-color-scheme`
+
+```css
+/* Light mode defaults */
+body { background-color: white; color: black; }
+
+/* Dark mode override */
+@media (prefers-color-scheme: dark) {
+  body { background-color: #121212; color: #f0f0f0; }
+}
+
+
