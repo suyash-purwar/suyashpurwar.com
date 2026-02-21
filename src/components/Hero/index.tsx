@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import Highlight from "@/components/Highlight";
+import SocialLinks from "@/components/SocialLinks";
 
 export default function Hero() {
   return (
@@ -19,6 +20,10 @@ export default function Hero() {
         <p className="mt-2 font-light md:text-lg">
           I've also recently started writing about core software engineering concepts beyond frameworks and tools, approaching problems from first principles and emphasising fundamentals over abstractions.
         </p>
+
+        <div className="mt-8">
+          <SocialLinks />
+        </div>
       </div>
     </section >
   );
