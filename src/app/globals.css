@@ -1,19 +1,18 @@
 @import "tailwindcss";
 
 :root {
-    --primary-color: #2176ff;
-    --secondary-color: #31363f;
-    --tertiary-color: #d9d9d9;
+	--primary-color: #2176ff;
+	--secondary-color: #31363f;
+	--tertiary-color: #d9d9d9;
 }
 
 *,
 *::before,
 *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+	box-sizing: border-box;
+
 }
 
 body {
-    font-family: var(--primary-font);
+	font-family: var(--primary-font);
 }

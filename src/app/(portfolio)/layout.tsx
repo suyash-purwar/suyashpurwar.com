@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${primaryFont.variable} ${secondaryFont.variable}`}>
-      <body>
+      <body className="max-w-4xl p-8 my-0 mx-auto lg:p-0">
         {children}
       </body>
     </html>

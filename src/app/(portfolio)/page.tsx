@@ -1,5 +1,7 @@
+import Navigation from "@/components/Navigation";
+
 export default function Home() {
   return (
-    <h1>Sample</h1>
+    <Navigation />
   );
 }
