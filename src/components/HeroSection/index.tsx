@@ -30,7 +30,7 @@ export default function Hero() {
           I've also recently started writing about core software engineering concepts beyond frameworks and tools, approaching problems from first principles and emphasising fundamentals over abstractions.
         </p>
 
-        <div className="mt-8">
+        <div className="mt-4 sm:mt-8">
           <SocialLinks socialLinks={links} />
         </div>
       </div>

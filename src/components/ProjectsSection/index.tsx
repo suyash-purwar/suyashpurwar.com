@@ -33,20 +33,19 @@ const projects: ProjectData[] = [
 
 export default function ProjectsSection() {
   return (
-    <section className="my-10" >
-      <div className="mb-25">
+    <section className="my-20 md:my-10" >
+      <div className="mb-6 md:mb-25">
         <Header title="Things I've built" />
       </div>
 
       {projects.map((project, index) => (
-        <div className="mb-20">
+        <div key={index} className="mb-10 md:mb-14">
           <Project
             title={project.title}
             descriptionParagraphs={project.descriptionParagraphs}
             imageSrc={project.imageSrc}
             imageAlt={project.imageAlt}
             links={project.links}
-            key={index}
           />
         </div>
       ))}
