@@ -1,11 +1,14 @@
-import Navigation from "@/components/Navigation";
-import Hero from "@/components/Hero";
+import Navigation from "@/components/base/Navigation";
+import HeroSection from "@/components/HeroSection";
+import ProjectsSection from "@/components/ProjectsSection";
 
 export default function Home() {
   return (
     <>
       <Navigation />
-      <Hero />
+      <HeroSection />
+
+      <ProjectsSection />
     </>
   );
 }

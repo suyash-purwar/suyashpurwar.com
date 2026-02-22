@@ -1,11 +1,10 @@
 import Link from "next/link";
 
-const links = [
-  { label: "linkedin", href: "https://www.linkedin.com/in/suyash-purwar/" },
-  { label: "twitter", href: "https://x.com/suyashpurwar06" },
-  { label: "github", href: "https://github.com/suyash-purwar/" },
-  { label: "email", href: "mailto:suyashpurwar4035@gmail.com" },
-] as const;
+import type { LinkData } from '@/types/index.type';
+
+type SocialLinksProps = {
+  socialLinks: LinkData[]
+}
 
 function Dot() {
   return (
@@ -16,10 +15,10 @@ function Dot() {
   );
 }
 
-export default function SocialLinks() {
+export default function SocialLinks({ socialLinks }: SocialLinksProps) {
   return (
     <ul className="flex flex-wrap items-center font-light text-sm italic text-gray-600 sm:text-base md:mt-4">
-      {links.map((item, i) => (
+      {socialLinks.map((item, i) => (
         <li key={item.label} className="flex items-center">
           {i > 0 && <Dot />}
           <Link

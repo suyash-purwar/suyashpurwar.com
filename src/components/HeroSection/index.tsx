@@ -1,7 +1,16 @@
 import Image from "next/image";
 
-import Highlight from "@/components/Highlight";
-import SocialLinks from "@/components/SocialLinks";
+import Highlight from "@/components/base/Highlight";
+import SocialLinks from "@/components/base/SocialLinks";
+
+import type { LinkData } from "@/types/index.type";
+
+const links: LinkData[] = [
+  { label: "linkedin", href: "https://www.linkedin.com/in/suyash-purwar/" },
+  { label: "twitter", href: "https://x.com/suyashpurwar06" },
+  { label: "github", href: "https://github.com/suyash-purwar/" },
+  { label: "email", href: "mailto:suyashpurwar4035@gmail.com" },
+] as const;
 
 export default function Hero() {
   return (
@@ -22,7 +31,7 @@ export default function Hero() {
         </p>
 
         <div className="mt-8">
-          <SocialLinks />
+          <SocialLinks socialLinks={links} />
         </div>
       </div>
     </section >

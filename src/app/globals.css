@@ -16,10 +16,10 @@
 *::before,
 *::after {
 	box-sizing: border-box;
-
 }
 
 body {
 	font-family: var(--primary-font);
+	font-weight: 300;
 	color: var(--secondary-color);
 }
