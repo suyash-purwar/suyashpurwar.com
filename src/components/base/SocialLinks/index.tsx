@@ -17,7 +17,7 @@ function Dot() {
 
 export default function SocialLinks({ socialLinks }: SocialLinksProps) {
   return (
-    <ul className="flex flex-wrap items-center font-light text-sm italic text-gray-600 sm:text-base md:mt-4">
+    <ul className="flex flex-wrap items-center font-light italic text-gray-600 sm:text-base md:mt-4">
       {socialLinks.map((item, i) => (
         <li key={item.label} className="flex items-center">
           {i > 0 && <Dot />}

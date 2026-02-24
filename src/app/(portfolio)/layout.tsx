@@ -1,4 +1,4 @@
-import { Raleway, Merriweather_Sans } from 'next/font/google';
+import { Raleway, Merriweather } from 'next/font/google';
 
 import "@/app/globals.css";
 
@@ -7,7 +7,7 @@ const primaryFont = Raleway({
   variable: '--primary-font',
 });
 
-const secondaryFont = Merriweather_Sans({
+const secondaryFont = Merriweather({
   subsets: ['latin'],
   variable: '--secondary-font',
 });

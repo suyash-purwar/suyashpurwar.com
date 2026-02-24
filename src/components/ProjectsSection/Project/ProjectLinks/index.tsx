@@ -17,7 +17,7 @@ function Dot() {
 
 export default function ProjectLinks({ projectLinks }: ProjectLinksProps) {
   return (
-    <ul className="underline flex flex-wrap items-center text-sm italic font-medium text-secondary tracking-wider">
+    <ul className="underline flex flex-wrap items-center italic font-medium text-secondary tracking-wider">
       {projectLinks.map((item, i) => (
         <li key={item.label} className="flex items-center">
           {i > 0 && <Dot />}
