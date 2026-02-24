@@ -10,7 +10,7 @@ const projects: ProjectData[] = [
       "HackerCode is a VS Code extension which allows to solve HackerRank challenge from VS Code itself allowing users to leverage the in-built debugger, VCS, extensive snippet support, and customisation.",
       "This project landed me an internship at HackerRank as an SDE Intern."
     ],
-    imageSrc: "/project-hackercode.png",
+    imageSrc: "/projects/hackercode.png",
     imageAlt: "HackerCode Project Image",
     links: [
       { label: "Github", href: "https://github.com/suyash-purwar/hackerrank-vscode" },
@@ -22,7 +22,7 @@ const projects: ProjectData[] = [
     descriptionParagraphs: [
       "Ayra is a natural language language bot that lives in your WhatsApp. It assists parents of college students by offering an accessible and intuitive platform to monitor their child's performance and receive important updates from their institutions. Bot can communicate in English and Hinglish."
     ],
-    imageSrc: "/project-ayra.png",
+    imageSrc: "/projects/ayra.png",
     imageAlt: "Ayra Project Image",
     links: [
       { label: "Github", href: "https://github.com/suyash-purwar/ayra" },

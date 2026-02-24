@@ -16,7 +16,7 @@ export default function Hero() {
   return (
     <section className="flex items-center mt-15 sm:min-h-screen sm:mt-0">
       <div>
-        <Image src="/hero.png" width={200} height={200} alt="Portrait of Suyash Purwar" />
+        <Image src="/hero/hero.png" width={200} height={200} alt="Portrait of Suyash Purwar" />
 
         <p className="mt-10 md:text-lg">
           I have a strong interest in <Highlight>low-level systems</Highlight> and enjoy building software in <Highlight>C/C++</Highlight> from the ground up. Currently, I'm developing a library that implements an intrusive linked list, focusing on performance and design fundamentals.
