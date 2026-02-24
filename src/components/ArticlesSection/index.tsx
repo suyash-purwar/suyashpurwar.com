@@ -40,11 +40,13 @@ export default function ArticlesSection() {
         <Header title="Recent Articles" />
       </div>
 
-      {articles.map((article, index) => (
-        <div key={article.slug + index} className="mb-6 md:mb-10">
-          <Article {...article} />
-        </div>
-      ))}
+      <div className="space-y-6 md:space-y-10">
+        {articles.map((article, index) => (
+          <div key={article.slug + index}>
+            <Article {...article} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

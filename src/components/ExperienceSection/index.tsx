@@ -45,7 +45,6 @@ const experiences: Experience[] = [
           "Developed a JWT based authentication/authorization system for the backend.",
           "Contributing to the frontend wire-framing for the user onboarding flow.",
           "Integrating third party APIs (Augmont and Paytm) with the backend.",
-          "Managing and deploying the application on AWS.",
         ],
       },
     ],
@@ -54,7 +53,7 @@ const experiences: Experience[] = [
 
 export default function ExperienceSection() {
   return (
-    <section id="experience" className="pt-15 md:pt-30">
+    <section id="experience" className="py-20 md:py-30">
       <div className="mb-8 md:mb-25">
         <Header title="Experience" />
       </div>

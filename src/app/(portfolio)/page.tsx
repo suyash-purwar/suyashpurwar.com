@@ -3,16 +3,22 @@ import HeroSection from "@/components/HeroSection";
 import ProjectsSection from "@/components/ProjectsSection";
 import ArticlesSection from "@/components/ArticlesSection";
 import ExperienceSection from "@/components/ExperienceSection";
+import Footer from "@/components/base/Footer";
 
 export default function Home() {
   return (
     <>
       <Navigation />
-      <HeroSection />
 
-      <ProjectsSection />
-      <ArticlesSection />
-      <ExperienceSection />
+      <main>
+        <HeroSection />
+
+        <ProjectsSection />
+        <ArticlesSection />
+        <ExperienceSection />
+      </main>
+
+      <Footer />
     </>
   );
 }

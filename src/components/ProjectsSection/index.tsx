@@ -38,17 +38,19 @@ export default function ProjectsSection() {
         <Header title="Things I've built" />
       </div>
 
-      {projects.map((project, index) => (
-        <div key={index} className="mb-10 md:mb-12">
-          <Project
-            title={project.title}
-            descriptionParagraphs={project.descriptionParagraphs}
-            imageSrc={project.imageSrc}
-            imageAlt={project.imageAlt}
-            links={project.links}
-          />
-        </div>
-      ))}
+      <div className="space-y-10 md:space-y-12">
+        {projects.map((project, index) => (
+          <div key={index}>
+            <Project
+              title={project.title}
+              descriptionParagraphs={project.descriptionParagraphs}
+              imageSrc={project.imageSrc}
+              imageAlt={project.imageAlt}
+              links={project.links}
+            />
+          </div>
+        ))}
+      </div>
 
     </section>
   )
