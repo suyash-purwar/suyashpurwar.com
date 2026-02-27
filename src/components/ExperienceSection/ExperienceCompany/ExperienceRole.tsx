@@ -11,7 +11,7 @@ export default function ExperienceRole({ title, dateRange, highlights }: Experie
       />
 
       <div className="min-w-0 sm:flex-1">
-        <h4 className="font-medium text-secondary md:text-lg">{title}</h4>
+        <h5 className="font-medium text-secondary md:text-lg">{title}</h5>
         <p className="mt-1 text-sm font-light text-gray-600">{dateRange}</p>
 
         <ul className="mt-2 list-inside list-disc space-y-2 font-light text-secondary sm:list-outside sm:space-y-3 sm:pl-8">

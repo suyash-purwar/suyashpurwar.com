@@ -14,11 +14,11 @@ export default function ExperienceCompany({
 }: ExperienceCompanyProps) {
   return (
     <div>
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-2 md:gap-4">
         <ExperienceLogo companyName={companyName} logoSrc={logoSrc} logoAlt={logoAlt} />
 
         <div className="min-w-0 flex-1">
-          <h3 className="text-xl font-medium text-secondary md:text-2xl">{companyName}</h3>
+          <h3 className="text-xl font-medium text-secondary md:text-xl">{companyName}</h3>
           <p className="mt-1 text-sm font-light text-gray-600">{companyMeta}</p>
 
           <div className="mt-4 space-y-4">
