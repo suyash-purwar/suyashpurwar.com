@@ -18,7 +18,9 @@ export default function Home() {
         <ExperienceSection />
       </main>
 
-      <Footer />
+      <div className="pt-20 md:pt-30">
+        <Footer />
+      </div>
     </>
   );
 }

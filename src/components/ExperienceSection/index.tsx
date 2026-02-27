@@ -53,7 +53,7 @@ const experiences: Experience[] = [
 
 export default function ExperienceSection() {
   return (
-    <section id="experience" className="py-20 md:py-30">
+    <section id="experience" className="pt-20 md:pt-30">
       <div className="mb-8 md:mb-25">
         <Header title="Experience" />
       </div>

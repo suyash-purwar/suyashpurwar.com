@@ -1,13 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
-type LogoProps = {
-	alt: string;
-	segment?: string;
-	segmentLink?: string;
-}
+import type { LogoProps } from "./type";
 
-export default function Logo({ alt, segment, segmentLink }: LogoProps) {
+export default function Logo({ segment, segmentLink }: LogoProps) {
 	const shouldShowSegment = segment && segmentLink;
 
 	return (
@@ -15,13 +11,13 @@ export default function Logo({ alt, segment, segmentLink }: LogoProps) {
 			<Link href="/">
 				<Image
 					src="/logo.svg"
-					alt={alt}
+					alt="Suyash Purwar's Portfolio"
 					width={80}
 					height={80}
 				/>
 			</Link>
 			{shouldShowSegment && (
-				<span className="text-gray-600 text-base font-bold" >
+				<span className="text-secondary font-semibold" >
 					/ <Link href={segmentLink}>{segment}</Link>
 				</span>
 			)}
