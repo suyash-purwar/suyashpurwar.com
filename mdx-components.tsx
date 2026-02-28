@@ -21,7 +21,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       />
     ),
     p: (props) => (
-      <p className="mt-4 leading-relaxed text-neutral-700" {...props} />
+      <p className="mt-4 leading-relaxed font-serif text-neutral-700" {...props} />
     ),
     a: (props) => (
       <a

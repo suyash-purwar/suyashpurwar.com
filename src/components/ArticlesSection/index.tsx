@@ -10,8 +10,8 @@ const articles: ArticleData[] = [
     description: "Lorem ipsum dolor sit exercitation ullamco laboris nisi ut aliqui amet, consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...",
     imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
     imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "31st Jan, 2026",
-    duration: 34
+    date: "2026-01-30",
+    duration: "34 mins"
   },
   {
     slug: "multithread-tcp-server-thread-pool-go",
@@ -19,8 +19,8 @@ const articles: ArticleData[] = [
     description: "Lorem ipsum dolor sit amet, adipiscing elit, sed do consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...",
     imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
     imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "31st Jan, 2026",
-    duration: 34
+    date: "2026-01-30",
+    duration: "34 mins"
   },
   {
     slug: "multithread-tcp-server-thread-pool-go",
@@ -28,8 +28,8 @@ const articles: ArticleData[] = [
     description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex adipiscing elit, sed do ea commodo consequat...",
     imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
     imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "31st Jan, 2026",
-    duration: 34
+    date: "2026-01-30",
+    duration: "34 mins"
   }
 ];
 

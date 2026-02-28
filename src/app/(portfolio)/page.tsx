@@ -8,19 +8,10 @@ import Footer from "@/components/base/Footer";
 export default function Home() {
   return (
     <>
-      <Navigation />
-
-      <main>
-        <HeroSection />
-
-        <ProjectsSection />
-        <ArticlesSection />
-        <ExperienceSection />
-      </main>
-
-      <div className="pt-20 md:pt-30">
-        <Footer />
-      </div>
+      <HeroSection />
+      <ProjectsSection />
+      <ArticlesSection />
+      <ExperienceSection />
     </>
   );
 }

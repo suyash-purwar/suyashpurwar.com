@@ -6,10 +6,12 @@ import path from 'path'
 const ARTICLES_DIR = path.join(process.cwd(), 'content', 'articles')
 
 export type ArticleFrontmatter = {
-  title?: string
-  description?: string
-  date?: string
-  [key: string]: unknown
+  title: string;
+  description: string;
+  date: string;
+  duration: string;
+  banner: string;
+  bannerAlt: string;
 }
 
 export type ArticleSummary = {

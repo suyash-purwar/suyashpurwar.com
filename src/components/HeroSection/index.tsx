@@ -7,14 +7,14 @@ import type { LinkData } from "@/types/index.type";
 
 const links: LinkData[] = [
   { label: "linkedin", href: "https://www.linkedin.com/in/suyash-purwar/" },
-  { label: "twitter", href: "https://x.com/suyashpurwar06" },
   { label: "github", href: "https://github.com/suyash-purwar/" },
+  { label: "twitter", href: "https://x.com/suyashpurwar06" },
   { label: "email", href: "mailto:suyashpurwar4035@gmail.com" },
 ] as const;
 
 export default function Hero() {
   return (
-    <section className="flex items-center mt-15 sm:min-h-screen sm:mt-0">
+    <section className="flex items-center py-20">
       <div>
         <Image src="/hero/hero.png" width={200} height={200} alt="Portrait of Suyash Purwar" />
 

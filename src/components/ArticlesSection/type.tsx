@@ -5,5 +5,5 @@ export type ArticleData = {
   imageSrc: string;
   imageAlt: string;
   date: string;
-  duration: number;
+  duration: string;
 }
