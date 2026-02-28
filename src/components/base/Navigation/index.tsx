@@ -8,9 +8,11 @@ type NavigationProps = {
 } & LogoProps
 
 export default function Navigation({ segment, segmentLink, shouldShowSearch }: NavigationProps) {
+	const isHomePage = segment && segmentLink;
+
 	return (
 		<nav className="relative">
-			<div className="w-full flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0 md:absolute lg:py-8">
+			<div className={`w-full flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0 lg:py-8 ${!isHomePage ? 'md:absolute' : ''}`}>
 				<div>
 					<Logo segment={segment} segmentLink={segmentLink} />
 				</div>
