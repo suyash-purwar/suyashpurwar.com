@@ -1,0 +1,27 @@
+---
+title: Distributed Systems
+---
+
+## Distributed Systems Fundamentals
+
+A distributed system is a collection of independent computers that appear to users as a single coherent system.
+
+### Key Challenges
+
+1. **Network Partitions** — Communication failures between nodes
+2. **Clock Synchronization** — No global clock across nodes
+3. **Consensus** — Getting nodes to agree on a value
+4. **Fault Tolerance** — System continues operating despite failures
+
+### Consistency Models
+
+- **Strong Consistency** — All reads return the most recent write
+- **Eventual Consistency** — All replicas converge given enough time
+- **Causal Consistency** — Preserves "happens-before" ordering
+
+### Important Algorithms
+
+- **Paxos** — Consensus protocol
+- **Raft** — Simpler consensus protocol
+- **Gossip Protocol** — Information dissemination
+- **Consistent Hashing** — Distributed hash tables

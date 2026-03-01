@@ -1,0 +1,39 @@
+---
+title: L4 and L7 Load Balancer
+---
+
+## Load Balancing: Layer 4 vs Layer 7
+
+### Layer 4 (Transport Layer)
+
+Operates at the TCP/UDP level. Makes routing decisions based on:
+- Source/destination IP addresses
+- Source/destination ports
+
+**Pros:** Fast, low overhead, protocol-agnostic
+**Cons:** No content-based routing, limited visibility
+
+### Layer 7 (Application Layer)
+
+Operates at the HTTP/HTTPS level. Can inspect:
+- URL paths
+- HTTP headers
+- Cookies
+- Request body
+
+**Pros:** Content-based routing, SSL termination, caching
+**Cons:** Higher latency, more resource-intensive
+
+### Comparison
+
+| Feature | L4 | L7 |
+|---------|----|----|
+| Speed | Faster | Slower |
+| Routing | IP/Port based | Content based |
+| SSL | Pass-through | Termination |
+| Caching | No | Yes |
+
+### AWS Load Balancers
+
+- **NLB** (Network Load Balancer) — Layer 4
+- **ALB** (Application Load Balancer) — Layer 7

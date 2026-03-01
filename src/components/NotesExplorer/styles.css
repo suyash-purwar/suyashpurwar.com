@@ -1,0 +1,158 @@
+.notes-explorer {
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
+  width: 280px;
+  min-width: 280px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding-bottom: 32px;
+}
+
+/* Scrollbar styling */
+.notes-explorer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notes-explorer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notes-explorer::-webkit-scrollbar-thumb {
+  background-color: var(--quaternary-color);
+  border-radius: 4px;
+}
+
+/* Explorer toggle button */
+.explorer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  width: 100%;
+  text-align: left;
+  color: var(--secondary-color);
+}
+
+.explorer-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.explorer-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.explorer-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* Tree structure */
+.explorer-tree {
+  margin-top: 4px;
+}
+
+.tree-root,
+.tree-children {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tree-item {
+  position: relative;
+}
+
+/* Folder toggle button */
+.tree-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 8px;
+  width: 100%;
+  text-align: left;
+  color: var(--secondary-color);
+  font-weight: 500;
+  font-size: 0.88rem;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.tree-folder:hover {
+  background-color: var(--quaternary-color);
+}
+
+.folder-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.folder-chevron.open {
+  transform: rotate(90deg);
+}
+
+/* File link */
+.tree-link {
+  display: block;
+  padding: 4px 8px 4px 26px;
+  color: var(--secondary-color);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 300;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  opacity: 0.8;
+}
+
+.tree-link:hover {
+  background-color: var(--quaternary-color);
+  opacity: 1;
+}
+
+.tree-link.active {
+  color: var(--primary-color);
+  font-weight: 500;
+  opacity: 1;
+  background-color: var(--quaternary-color);
+}
+
+.tree-label {
+  line-height: 1.4;
+}
+
+/* Children animation */
+.tree-children {
+  overflow: hidden;
+}
+
+/* Mobile: Hide sidebar */
+@media (max-width: 768px) {
+  .notes-explorer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+    width: 280px;
+    min-width: 280px;
+    height: 100vh;
+    max-height: 100vh;
+    background-color: var(--tertiary-color);
+    border-right: 1px solid var(--quaternary-color);
+    padding: 16px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .notes-explorer.mobile-open {
+    transform: translateX(0);
+  }
+}

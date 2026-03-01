@@ -1,0 +1,28 @@
+---
+title: AWS VPC
+---
+
+## Amazon Virtual Private Cloud (VPC)
+
+A VPC is a logically isolated section of the AWS Cloud where you can launch AWS resources in a virtual network that you define.
+
+### Key Components
+
+- **Subnets** — Range of IP addresses in your VPC
+- **Route Tables** — Rules that determine where network traffic is directed
+- **Internet Gateway** — Allows communication between your VPC and the internet
+- **NAT Gateway** — Enables instances in a private subnet to connect to the internet
+- **Security Groups** — Virtual firewall for your instances
+- **Network ACLs** — Additional layer of security at the subnet level
+
+### CIDR Blocks
+
+VPCs use CIDR notation to define IP address ranges. For example:
+- `10.0.0.0/16` gives you 65,536 IP addresses
+- `10.0.1.0/24` gives you 256 IP addresses
+
+### Best Practices
+
+1. Use multiple Availability Zones for high availability
+2. Use private subnets for backend services
+3. Implement least-privilege security group rules

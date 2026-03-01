@@ -1,0 +1,27 @@
+---
+title: 2 - Fact Data Modelling
+---
+
+## Fact Data Modelling
+
+### What are Facts?
+
+Facts are the quantitative measurements of a business process. They are the numeric values that users want to analyze.
+
+### Types of Fact Tables
+
+1. **Transaction Facts** — One row per transaction event
+2. **Periodic Snapshot Facts** — One row per time period
+3. **Accumulating Snapshot Facts** — One row per entity lifecycle
+
+### Grain
+
+The grain defines what a single row in the fact table represents. Setting the grain correctly is critical:
+- Too fine → excessive storage
+- Too coarse → loss of analytical flexibility
+
+### Measures
+
+- **Additive** — Can be summed across all dimensions (e.g., revenue)
+- **Semi-Additive** — Can be summed across some dimensions (e.g., account balance)
+- **Non-Additive** — Cannot be summed (e.g., ratios, percentages)

@@ -1,0 +1,27 @@
+---
+title: Databases
+---
+
+## Database Fundamentals
+
+### Types of Databases
+
+1. **Relational (SQL)** — PostgreSQL, MySQL, Oracle
+2. **Document** — MongoDB, CouchDB
+3. **Key-Value** — Redis, DynamoDB
+4. **Columnar** — Cassandra, HBase
+5. **Graph** — Neo4j, Amazon Neptune
+
+### ACID Properties
+
+- **Atomicity** — All or nothing
+- **Consistency** — Valid state transitions only
+- **Isolation** — Concurrent transactions don't interfere
+- **Durability** — Committed data survives failures
+
+### CAP Theorem
+
+In a distributed system, you can only guarantee two of:
+- **Consistency** — Every read gets the most recent write
+- **Availability** — Every request gets a response
+- **Partition Tolerance** — System works despite network failures

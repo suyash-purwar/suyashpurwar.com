@@ -12,7 +12,7 @@ const links: LinkData[] = [
 
 export default function Footer() {
   return (
-    <footer className="border-t-1 border-quaternary pt-8 md:py-15">
+    <footer className="border-t-1 border-quaternary pt-8 md:py-10">
       <div className="flex flex-col gap-1 justify-between items-center sm:flex-row">
         <Logo />
         <SocialLinks socialLinks={links} />

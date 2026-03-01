@@ -1,0 +1,30 @@
+---
+title: 01 - Introduction
+---
+
+## Introduction to Microservices
+
+Microservices is an architectural approach where an application is built as a collection of small, loosely coupled, independently deployable services.
+
+### Characteristics
+
+1. **Single Responsibility** — Each service does one thing well
+2. **Independently Deployable** — Services can be updated without affecting others
+3. **Decentralized Data** — Each service manages its own database
+4. **Fault Isolation** — Failure in one service doesn't cascade
+5. **Technology Agnostic** — Services can use different tech stacks
+
+### Monolith vs Microservices
+
+| Aspect | Monolith | Microservices |
+|--------|----------|---------------|
+| Deployment | All-or-nothing | Independent |
+| Scaling | Vertical | Horizontal |
+| Complexity | Simple at first | Complex infrastructure |
+| Team Structure | Single team | Multiple autonomous teams |
+
+### Communication Patterns
+
+- **Synchronous** — REST, gRPC
+- **Asynchronous** — Message queues (RabbitMQ, Kafka)
+- **Event-Driven** — Event sourcing, CQRS

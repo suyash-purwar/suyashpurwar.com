@@ -1,0 +1,23 @@
+---
+title: 1 - Dimensions
+---
+
+## Dimensional Modelling — Dimensions
+
+### What are Dimensions?
+
+Dimensions are the descriptive attributes that provide context to facts/measures. They answer the "who, what, where, when, why, and how" questions.
+
+### Types of Dimensions
+
+1. **Conformed Dimensions** — Shared across multiple fact tables
+2. **Junk Dimensions** — Grouping of low-cardinality flags and indicators
+3. **Degenerate Dimensions** — Dimension key with no associated dimension table (e.g., invoice number)
+4. **Role-Playing Dimensions** — Same dimension used for different purposes (e.g., date dimension as order_date, ship_date)
+
+### Slowly Changing Dimensions (SCD)
+
+- **Type 0** — Retain original value, never update
+- **Type 1** — Overwrite old value with new value
+- **Type 2** — Add new row with versioning (start_date, end_date, is_current)
+- **Type 3** — Add new column for previous value

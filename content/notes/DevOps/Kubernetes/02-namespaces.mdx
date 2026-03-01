@@ -1,0 +1,48 @@
+---
+title: 02 - Namespaces
+---
+
+## Kubernetes Namespaces
+
+Namespaces provide a mechanism for isolating groups of resources within a single cluster.
+
+### Default Namespaces
+
+1. **default** — The default namespace for objects with no namespace
+2. **kube-system** — For objects created by the Kubernetes system
+3. **kube-public** — Readable by all users, reserved for cluster usage
+4. **kube-node-lease** — Holds lease objects for each node
+
+### Working with Namespaces
+
+```bash
+# List all namespaces
+kubectl get namespaces
+
+# Create a namespace
+kubectl create namespace my-namespace
+
+# Set default namespace for context
+kubectl config set-context --current --namespace=my-namespace
+
+# Get resources in a specific namespace
+kubectl get pods -n my-namespace
+```
+
+### Resource Quotas
+
+You can limit resources per namespace:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: my-namespace
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+```

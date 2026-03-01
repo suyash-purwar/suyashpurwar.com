@@ -1,0 +1,109 @@
+/* Notes layout: two-column with sidebar */
+.notes-layout {
+    display: flex;
+    gap: 32px;
+    flex: 1;
+    margin-top: 16px;
+    align-items: flex-start;
+}
+
+.notes-main {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0 32px;
+}
+
+/* Note content styling */
+.note-content {}
+
+.note-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--quaternary-color);
+}
+
+.note-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+    line-height: 1.3;
+}
+
+.note-body {
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--secondary-color);
+}
+
+/* Landing page */
+.notes-landing {
+    padding: 16px 0;
+}
+
+.notes-landing-title {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 8px;
+}
+
+.notes-landing-desc {
+    color: var(--secondary-color);
+    opacity: 0.7;
+    font-size: 0.95rem;
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+/* Category cards grid */
+.notes-categories {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.category-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    border: 1px solid var(--quaternary-color);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--secondary-color);
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+}
+
+.category-card:hover {
+    border-color: var(--primary-color);
+    background-color: var(--quaternary-color);
+    transform: translateY(-1px);
+}
+
+.category-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.category-count {
+    font-size: 0.8rem;
+    opacity: 0.55;
+    font-weight: 300;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .notes-layout {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .notes-categories {
+        grid-template-columns: 1fr;
+    }
+
+    .note-title {
+        font-size: 1.5rem;
+    }
+}

@@ -9,7 +9,7 @@ type ExperienceLogoProps = {
 export default function ExperienceLogo({ companyName, logoSrc, logoAlt }: ExperienceLogoProps) {
 
   return (
-    <div className="relative h-13 w-13 shrink-0 overflow-hidden rounded-sm bg-white">
+    <div className="relative h-13 w-13 shrink-0 overflow-hidden rounded-sm">
       <Image
         src={logoSrc}
         alt={logoAlt ?? `${companyName} logo`}

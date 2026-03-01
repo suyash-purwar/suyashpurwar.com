@@ -1,0 +1,40 @@
+---
+title: 01 - Introduction
+---
+
+## Introduction to Kubernetes
+
+Kubernetes (K8s) is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications.
+
+### Core Concepts
+
+- **Pod** — Smallest deployable unit, contains one or more containers
+- **Node** — A worker machine (physical or virtual) that runs pods
+- **Cluster** — A set of nodes managed by the control plane
+- **Service** — An abstract way to expose an application running on pods
+- **Deployment** — Declarative updates for pods and replica sets
+
+### Architecture
+
+```
+Control Plane
+├── API Server (kube-apiserver)
+├── Controller Manager
+├── Scheduler
+└── etcd (key-value store)
+
+Worker Nodes
+├── kubelet
+├── kube-proxy
+└── Container Runtime
+```
+
+### Basic Commands
+
+```bash
+kubectl get pods
+kubectl get services
+kubectl apply -f deployment.yaml
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+```
