@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 
+import ArticleHeader from "@/components/base/ArticleHeader"
 import { getArticleModule } from "@/lib/articles"
 
 type ArticlePageProps = {
@@ -21,12 +22,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     return (
       <main className="mx-auto flex flex-col gap-8 py-6">
         <article>
-          {frontmatter?.title && (
-            <h1 className="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-              {frontmatter.title}
-            </h1>
-          )}
-          <Article />
+          <ArticleHeader {...frontmatter} />
+
+          <div className="max-w-3xl mx-auto text-">
+            <Article />
+          </div>
         </article>
       </main>
     )

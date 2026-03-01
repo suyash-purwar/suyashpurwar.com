@@ -1,9 +1,8 @@
-import Navigation from "@/components/base/Navigation"
-import Article from "@/components/base/Article"
-import { getArticles } from "@/lib/articles"
+import Article from "@/components/base/ArticleCard";
+import { getArticles } from "@/lib/articles";
 
 export default async function ArticlesPage() {
-  const articles = getArticles()
+  const articles = getArticles();
 
   const doArticlesExist = articles.length > 0;
 
@@ -18,12 +17,12 @@ export default async function ArticlesPage() {
           <ul className="divide-y divide-neutral-200">
             {articles.map((article) => (
               <li key={article.slug} className="py-4">
-                <Article {...article} imageSrc={article.banner} imageAlt={article.bannerAlt} />
+                <Article {...article} />
               </li>
             ))}
           </ul>
         )}
       </section>
     </main>
-  )
+  );
 }

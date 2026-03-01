@@ -33,8 +33,8 @@ export default function Navigation() {
 				</div>
 				<div className="flex flex-wrap items-center gap-4 sm:gap-15">
 					<Link href="/articles">articles</Link>
-					<Link href="#projects">projects</Link>
-					<Link href="#experience">experience</Link>
+					<Link href="/#projects">projects</Link>
+					<Link href="/#experience">experience</Link>
 				</div>
 			</div>
 		</nav>

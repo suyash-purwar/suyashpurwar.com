@@ -1,39 +1,10 @@
-import Header from "@/components/base/Header"
-import Article from "@/components/base/Article";
-
-import type { ArticleData } from "./type";
-
-const articles: ArticleData[] = [
-  {
-    slug: "multithread-tcp-server-thread-pool-go",
-    title: "Multi-threaded TCP server with Thread Pool in Go",
-    description: "Lorem ipsum dolor sit exercitation ullamco laboris nisi ut aliqui amet, consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...",
-    imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
-    imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "2026-01-30",
-    duration: "34 mins"
-  },
-  {
-    slug: "multithread-tcp-server-thread-pool-go",
-    title: "Multi-threaded TCP server with Thread Pool in Go",
-    description: "Lorem ipsum dolor sit amet, adipiscing elit, sed do consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...",
-    imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
-    imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "2026-01-30",
-    duration: "34 mins"
-  },
-  {
-    slug: "multithread-tcp-server-thread-pool-go",
-    title: "Multi-threaded TCP server with Thread Pool in Go",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incstrud exercitation ullamco laboris nisi ut aliquip ex adipiscing elit, sed do ea commodo consequat...",
-    imageSrc: "multithreaded-tcp-server-thread-pool-go.png",
-    imageAlt: "Multi-threaded TCP server with Thread Pool in Go",
-    date: "2026-01-30",
-    duration: "34 mins"
-  }
-];
+import Header from "@/components/base/Header";
+import Article from "@/components/base/ArticleCard";
+import { getArticles } from "@/lib/articles";
 
 export default function ArticlesSection() {
+  const articles = getArticles()
+
   return (
     <section className="pt-15 md:pt-30">
       <div className="mb-8 md:mb-25">

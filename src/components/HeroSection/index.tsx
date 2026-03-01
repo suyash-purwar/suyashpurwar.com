@@ -14,7 +14,7 @@ const links: LinkData[] = [
 
 export default function Hero() {
   return (
-    <section className="flex items-center py-20">
+    <header className="flex items-center py-20">
       <div>
         <Image src="/hero/hero.png" width={200} height={200} alt="Portrait of Suyash Purwar" />
 
@@ -34,6 +34,6 @@ export default function Hero() {
           <SocialLinks socialLinks={links} />
         </div>
       </div>
-    </section >
+    </header >
   );
 }

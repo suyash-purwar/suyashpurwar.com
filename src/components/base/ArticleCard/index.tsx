@@ -1,12 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import ArticleInfo from '@/components/base/Article/ArticleInfo';
+import ArticleInfo from '@/components/base/ArticleCard/ArticleInfo';
 
-import type { ArticleData as ArticleProps } from '@/components/ArticlesSection/type';
+import type { ArticleSummary as ArticleProps } from '@/lib/articles';
 
-
-export default function Article({ slug, title, description, imageSrc, imageAlt, date, duration }: ArticleProps) {
+export default function Article({ slug, title, description, banner, bannerAlt, date, duration }: ArticleProps) {
 
   const getImageUrl = (filename: string) => {
     return `/articles/${filename}`;
@@ -27,8 +26,8 @@ export default function Article({ slug, title, description, imageSrc, imageAlt, 
         </div>
         <div className="order-1 relative w-full aspect-video md:order-2">
           <Image
-            src={getImageUrl(imageSrc)}
-            alt={imageAlt}
+            src={getImageUrl(banner)}
+            alt={bannerAlt}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 33vw"

@@ -29,13 +29,13 @@ const projects: ProjectData[] = [
       { label: "Docs", href: "https://github.com/suyash-purwar/ayra/blob/master/README.md" }
     ]
   }
-]
+];
 
 export default function ProjectsSection() {
   return (
-    <section className="pt-20 pt-30" >
+    <section className="pt-20 pt-30" id="projects">
       <div className="mb-8 md:mb-25">
-        <Header title="Things I've built" />
+        <Header title="Projects" />
       </div>
 
       <div className="space-y-10 md:space-y-12">
@@ -53,5 +53,5 @@ export default function ProjectsSection() {
       </div>
 
     </section>
-  )
+  );
 }
