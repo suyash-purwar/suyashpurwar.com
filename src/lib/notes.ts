@@ -87,13 +87,13 @@ export function getAllNoteSlugs(nodes?: NoteTreeNode[]): string[][] {
 }
 
 export async function getNoteModule(slugParts: string[]): Promise<NoteModule> {
-    const relativePath = slugParts.join('/');
+    const relativePath = slugParts.map((part) => decodeURIComponent(part)).join('/');
     const mod = await import(`../../content/notes/${relativePath}.mdx`);
     return mod as NoteModule;
 }
 
 export function noteExists(slugParts: string[]): boolean {
-    const relativePath = slugParts.join('/');
+    const relativePath = slugParts.map((part) => decodeURIComponent(part)).join('/');
     const mdxPath = path.join(NOTES_DIR, `${relativePath}.mdx`);
     const mdPath = path.join(NOTES_DIR, `${relativePath}.md`);
     return fs.existsSync(mdxPath) || fs.existsSync(mdPath);
