@@ -4,12 +4,14 @@
 	--color-primary: var(--primary-color);
 	--color-secondary: var(--secondary-color);
 	--color-tertiary: var(--tertiary-color);
+	--color-quaternary: var(--quaternary-color);
 }
 
 :root {
-	--primary-color: #2176ff;
-	--secondary-color: #31363f;
-	--tertiary-color: #d9d9d9;
+	--primary-color: #c7522a;
+	--secondary-color: #3e2c1c;
+	--tertiary-color: #fdf6e3;
+	--quaternary-color: #c7512a66;
 }
 
 *,
@@ -19,6 +21,7 @@
 }
 
 body {
+	background-color: var(--tertiary-color);
 	font-family: var(--primary-font);
 	font-weight: 400;
 	color: var(--secondary-color);

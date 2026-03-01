@@ -27,7 +27,7 @@ export default function Navigation() {
 
 	return (
 		<nav className="relative">
-			<div className={`w-full flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-0 lg:py-8`}>
+			<div className="w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-0 lg:py-8">
 				<div>
 					<Logo segment={segment} segmentLink={segmentLink} />
 				</div>

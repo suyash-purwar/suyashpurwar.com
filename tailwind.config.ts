@@ -13,6 +13,7 @@ const config: Config = {
 				primary: 'var(--primary-color)',
 				secondary: 'var(--secondary-color)',
 				tertiary: 'var(--tertiary-color)',
+				quaternary: 'var(--quaternary-color)',
 			},
 			fontFamily: {
 				sans: ['var(--primary-font)', 'sans-serif'],
