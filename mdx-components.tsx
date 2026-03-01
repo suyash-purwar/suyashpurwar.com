@@ -1,3 +1,5 @@
+import { JSX } from 'react'
+
 import type { MDXComponents } from 'mdx/types'
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
@@ -36,7 +38,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <ol className="mb-4 list-decimal space-y-1 pl-6" {...props} />
     ),
     code: (props) => (
-      <code className="rounded bg-neutral-100 px-1 py-0.5 text-sm" {...props} />
+      <code className="rounded px-1 py-0.5 text-sm" {...props} />
     ),
     pre: (props) => (
       <pre className="mb-4 overflow-x-auto rounded bg-neutral-900 p-4 text-sm text-neutral-50" {...props} />

@@ -18,8 +18,10 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "rehype-pretty-code": "^0.14.1",
     "remark-frontmatter": "^5.0.0",
-    "remark-mdx-frontmatter": "^5.2.0"
+    "remark-mdx-frontmatter": "^5.2.0",
+    "shiki": "^3.23.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
