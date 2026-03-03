@@ -1,7 +1,7 @@
 import { Raleway, Merriweather } from 'next/font/google';
 
 import Navigation from '@/components/base/Navigation';
-import NotesExplorer from '@/components/NotesExplorer';
+import NotesLayoutClient from '@/components/NotesLayoutClient';
 import { getNotesTree } from '@/lib/notes';
 
 import "@/app/globals.css";
@@ -30,13 +30,9 @@ export default function NotesLayout({
         <div className="min-h-screen flex flex-col max-w-6xl p-6 my-0 mx-auto lg:p-0">
           <Navigation />
 
-          <div className="notes-layout">
-            <NotesExplorer tree={tree} />
-
-            <main className="notes-main">
-              {children}
-            </main>
-          </div>
+          <NotesLayoutClient tree={tree}>
+            {children}
+          </NotesLayoutClient>
         </div>
       </body>
     </html>
