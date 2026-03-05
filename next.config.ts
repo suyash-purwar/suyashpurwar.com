@@ -5,6 +5,10 @@ import type { NextConfig } from "next";
 /** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  output: "export",
+  basePath: "",
+  assetPrefix: "/",
+  images: { unoptimized: true },
 };
 
 /** @type {import('rehype-pretty-code').Options} */
