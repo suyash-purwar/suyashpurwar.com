@@ -1,10 +1,15 @@
 import { notFound } from "next/navigation"
 
 import ArticleHeader from "@/components/base/ArticleHeader"
-import { getArticleModule } from "@/lib/articles"
+import { getArticles, getArticleModule } from "@/lib/articles"
 
 type ArticlePageProps = {
   params: Promise<{ slug: string }>
+}
+
+export async function generateStaticParams() {
+  const articles = getArticles();
+  return articles.map((article) => ({ slug: article.slug }));
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
