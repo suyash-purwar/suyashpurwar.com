@@ -97,6 +97,7 @@
     .notes-layout {
         flex-direction: column;
         gap: 16px;
+        align-items: normal;
     }
 
     .notes-categories {

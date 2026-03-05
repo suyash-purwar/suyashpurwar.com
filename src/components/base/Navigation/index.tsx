@@ -36,7 +36,6 @@ export default function Navigation() {
 						<Link href="/articles">articles</Link>
 						<Link href="/#projects">projects</Link>
 						<Link href="/#experience">experience</Link>
-						<Link href="/notes">notes</Link>
 					</div>
 				)}
 			</div>
