@@ -8,7 +8,10 @@ type NotePageProps = {
 
 export async function generateStaticParams() {
   const slugs = getAllNoteSlugs();
-  return slugs.map((slug) => ({ slug }));
+
+  return slugs.map((slug) => ({
+    slug: slug.map((part) => encodeURIComponent(part)),
+  }));
 }
 
 export default async function NotePage({ params }: NotePageProps) {
