@@ -1,50 +1,50 @@
 /* Mobile explorer trigger — hidden on desktop */
 .mobile-explorer-trigger {
-    display: none;
+  display: none;
 }
 
 /* Backdrop overlay for mobile sidebar */
 .mobile-explorer-backdrop {
-    display: none;
+  display: none;
 }
 
 @media (max-width: 768px) {
-    .mobile-explorer-trigger {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        width: 100%;
-        padding: 10px 12px;
-        background: none;
-        border: 1px solid var(--quaternary-color);
-        border-radius: 8px;
-        cursor: pointer;
-        color: var(--secondary-color);
-        font-family: var(--primary-font);
-        font-size: 0.88rem;
-        font-weight: 500;
-        letter-spacing: 0.01em;
-        transition: background-color 0.15s ease, border-color 0.15s ease;
-    }
+  .mobile-explorer-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: 1px solid var(--quaternary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--secondary-color);
+    font-family: var(--primary-font);
+    font-size: 0.88rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
 
-    .mobile-explorer-trigger:hover,
-    .mobile-explorer-trigger:active {
-        background-color: var(--quaternary-color);
-        border-color: var(--primary-color);
-    }
+  .mobile-explorer-trigger:hover,
+  .mobile-explorer-trigger:active {
+    background-color: var(--quaternary-color);
+    border-color: var(--primary-color);
+  }
 
-    .mobile-explorer-chevron {
-        margin-left: auto;
-        opacity: 0.5;
-    }
+  .mobile-explorer-chevron {
+    margin-left: auto;
+    opacity: 0.5;
+  }
 
-    .mobile-explorer-backdrop {
-        display: block;
-        position: fixed;
-        inset: 0;
-        z-index: 40;
-        background-color: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
-    }
+  .mobile-explorer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
 }

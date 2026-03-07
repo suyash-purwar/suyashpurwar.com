@@ -41,6 +41,20 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     pre: (props) => (
       <pre className="mb-4 overflow-x-auto rounded bg-neutral-900 p-4 text-sm text-neutral-50" {...props} />
     ),
+    table: (props) => (
+      <div className="mb-4 overflow-x-auto">
+        <table className="w-full border-collapse text-sm" {...props} />
+      </div>
+    ),
+    thead: (props) => (
+      <thead className="border-b-2 border-[var(--quaternary-color)]" {...props} />
+    ),
+    th: (props) => (
+      <th className="px-4 py-2 text-left font-semibold" {...props} />
+    ),
+    td: (props) => (
+      <td className="border-b border-[var(--quaternary-color)] px-4 py-2" {...props} />
+    ),
     ...components,
   }
 }

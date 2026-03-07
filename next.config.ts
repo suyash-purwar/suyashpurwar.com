@@ -18,7 +18,7 @@ const rehypeOptions = {
 const withMDX = createMDX({
   extension: /\.(md|mdx)$/,
   options: {
-    remarkPlugins: ['remark-frontmatter', 'remark-mdx-frontmatter'],
+    remarkPlugins: ['remark-frontmatter', 'remark-mdx-frontmatter', 'remark-gfm'],
     rehypePlugins: [['rehype-pretty-code', rehypeOptions]]
   },
 });
