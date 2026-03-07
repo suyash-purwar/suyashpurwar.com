@@ -3,7 +3,6 @@
     display: flex;
     gap: 32px;
     flex: 1;
-    margin-top: 16px;
     align-items: flex-start;
 }
 
@@ -36,10 +35,6 @@
 }
 
 /* Landing page */
-.notes-landing {
-    padding: 16px 0;
-}
-
 .notes-landing-title {
     font-size: 2rem;
     font-weight: 600;

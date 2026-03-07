@@ -21,9 +21,8 @@ export default function NotesLayoutClient({ tree, children }: NotesLayoutClientP
 
   return (
     <>
-      {/* Mobile trigger — visible only on small screens */}
       <button
-        className="mobile-explorer-trigger"
+        className="mobile-explorer-trigger mt-6"
         onClick={() => setIsMobileOpen(true)}
         aria-label="Open notes explorer"
       >
@@ -61,8 +60,7 @@ export default function NotesLayoutClient({ tree, children }: NotesLayoutClientP
         </svg>
       </button>
 
-      <div className="notes-layout">
-        {/* Backdrop overlay */}
+      <div className="notes-layout mt-6 lg:mt-0">
         {isMobileOpen && (
           <div
             className="mobile-explorer-backdrop"
