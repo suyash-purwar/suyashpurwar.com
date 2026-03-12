@@ -24,14 +24,14 @@ export default function NotesPage() {
 function CategoryCard({ node }: { node: NoteTreeNode }) {
   const noteCount = countNotes(node);
   const href = node.type === 'file'
-    ? `/notes/${node.slug.map(encodeURIComponent).join('/')}`
-    : `/notes/${node.slug.map(encodeURIComponent).join('/')}/${getFirstFileSlug(node)}`;
+    ? `/notes/${node.slug.join('/')}`
+    : `/notes/${node.slug.join('/')}/${getFirstFileSlug(node)}`;
 
   // For folders, just show the category name and count
   if (node.type === 'folder') {
     const firstFile = findFirstFile(node);
     const link = firstFile
-      ? `/notes/${firstFile.slug.map(encodeURIComponent).join('/')}`
+      ? `/notes/${firstFile.slug.join('/')}`
       : '#';
 
     return (

@@ -103,7 +103,7 @@ function TreeItem({ node, level, onMobileClose }: TreeItemProps) {
     return false;
   });
 
-  const href = '/notes/' + node.slug.map(encodeURIComponent).join('/');
+  const href = '/notes/' + node.slug.join('/');
   const isActive = pathname === href;
 
   if (node.type === 'file') {

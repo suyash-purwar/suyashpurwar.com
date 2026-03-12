@@ -10,7 +10,7 @@ export async function generateStaticParams() {
   const slugs = getAllNoteSlugs();
 
   return slugs.map((slug) => ({
-    slug: slug.map((part) => encodeURIComponent(part)),
+    slug,
   }));
 }
 

@@ -5,10 +5,22 @@ import type { ComponentType } from 'react';
 
 const NOTES_DIR = path.join(process.cwd(), 'content', 'notes');
 
+/**
+ * Convert a filesystem name to a URL-safe slug.
+ * Replaces spaces with hyphens and collapses consecutive hyphens.
+ */
+function slugify(name: string): string {
+  return name
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export type NoteTreeNode = {
   name: string;
   type: 'folder' | 'file';
   slug: string[];
+  pathParts: string[];
   children?: NoteTreeNode[];
   title?: string;
 };
@@ -24,7 +36,11 @@ export type NoteModule = {
 /**
  * Recursively builds a tree of notes from the filesystem.
  */
-export function getNotesTree(dir: string = NOTES_DIR, slugPrefix: string[] = []): NoteTreeNode[] {
+export function getNotesTree(
+  dir: string = NOTES_DIR,
+  slugPrefix: string[] = [],
+  pathPrefix: string[] = [],
+): NoteTreeNode[] {
   if (!fs.existsSync(dir)) {
     return [];
   }
@@ -43,26 +59,30 @@ export function getNotesTree(dir: string = NOTES_DIR, slugPrefix: string[] = [])
     if (entry.name.startsWith('.')) continue;
 
     if (entry.isDirectory()) {
-      const childSlug = [...slugPrefix, entry.name];
-      const children = getNotesTree(path.join(dir, entry.name), childSlug);
+      const childSlug = [...slugPrefix, slugify(entry.name)];
+      const childPath = [...pathPrefix, entry.name];
+      const children = getNotesTree(path.join(dir, entry.name), childSlug, childPath);
       nodes.push({
         name: entry.name,
         type: 'folder',
         slug: childSlug,
+        pathParts: childPath,
         children,
       });
     } else if (/\.(md|mdx)$/.test(entry.name)) {
       const baseName = entry.name.replace(/\.(md|mdx)$/, '');
-      const fileSlug = [...slugPrefix, baseName];
+      const fileSlug = [...slugPrefix, slugify(baseName)];
+      const filePath = [...pathPrefix, baseName];
 
-      const filePath = path.join(dir, entry.name);
-      const raw = fs.readFileSync(filePath, 'utf-8');
+      const fullPath = path.join(dir, entry.name);
+      const raw = fs.readFileSync(fullPath, 'utf-8');
       const { data } = matter(raw);
 
       nodes.push({
         name: baseName,
         type: 'file',
         slug: fileSlug,
+        pathParts: filePath,
         title: (data.title as string) || baseName,
       });
     }
@@ -86,14 +106,39 @@ export function getAllNoteSlugs(nodes?: NoteTreeNode[]): string[][] {
   return slugs;
 }
 
+/**
+ * Build a map from slugified path to original filesystem path.
+ */
+function buildSlugToPathMap(nodes?: NoteTreeNode[]): Map<string, string> {
+  const tree = nodes ?? getNotesTree();
+  const map = new Map<string, string>();
+
+  function walk(nodes: NoteTreeNode[]) {
+    for (const node of nodes) {
+      if (node.type === 'file') {
+        map.set(node.slug.join('/'), node.pathParts.join('/'));
+      } else if (node.children) {
+        walk(node.children);
+      }
+    }
+  }
+
+  walk(tree);
+  return map;
+}
+
 export async function getNoteModule(slugParts: string[]): Promise<NoteModule> {
-  const relativePath = slugParts.map((part) => decodeURIComponent(part)).join('/');
+  const slugToPath = buildSlugToPathMap();
+  const slugKey = slugParts.join('/');
+  const relativePath = slugToPath.get(slugKey) ?? slugKey;
   const mod = await import(`../../content/notes/${relativePath}.mdx`);
   return mod as NoteModule;
 }
 
 export function noteExists(slugParts: string[]): boolean {
-  const relativePath = slugParts.map((part) => decodeURIComponent(part)).join('/');
+  const slugToPath = buildSlugToPathMap();
+  const slugKey = slugParts.join('/');
+  const relativePath = slugToPath.get(slugKey) ?? slugKey;
   const mdxPath = path.join(NOTES_DIR, `${relativePath}.mdx`);
   const mdPath = path.join(NOTES_DIR, `${relativePath}.md`);
   return fs.existsSync(mdxPath) || fs.existsSync(mdPath);
