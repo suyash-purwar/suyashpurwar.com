@@ -6,7 +6,7 @@ export default function ArticlesSection() {
   const articles = getArticles()
 
   return (
-    <section className="pt-15 md:pt-30">
+    <section className="pt-30 2xl:pt-40">
       <div className="mb-8 md:mb-25">
         <Header title="Recent Articles" />
       </div>

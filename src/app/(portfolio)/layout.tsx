@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${primaryFont.variable} ${secondaryFont.variable}`}>
       <body>
-        <div className="min-h-screen flex flex-col max-w-4xl p-6 my-0 mx-auto lg:p-0">
+        <div className="min-h-screen flex flex-col max-w-4xl p-6 my-0 mx-auto lg:p-0 2xl:max-w-5xl">
           <Navigation />
 
           <main className="flex-1">

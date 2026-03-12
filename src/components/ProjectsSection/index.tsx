@@ -33,7 +33,7 @@ const projects: ProjectData[] = [
 
 export default function ProjectsSection() {
   return (
-    <section className="pt-20 pt-30" id="projects">
+    <section className="pt-30 2xl:pt-40" id="projects">
       <div className="mb-8 md:mb-25">
         <Header title="Projects" />
       </div>

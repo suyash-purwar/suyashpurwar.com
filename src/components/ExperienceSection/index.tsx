@@ -7,26 +7,34 @@ import type { Experience } from "@/components/ExperienceSection/type";
 const experiences: Experience[] = [
   {
     companyName: "HackerRank",
-    companyMeta: "Internship • 7 mos",
+    companyMeta: "2 years 3 months",
     logoSrc: "/experience/hackerrank.png",
     logoAlt: "HackerRank logo",
     roles: [
       {
-        title: "SDE Intern II",
-        dateRange: "July 2024 - Present",
+        title: "SDE II",
+        dateRange: "Mar 2026 - Present",
         highlights: [
-          "Managed multiple projects and mentored 6 co-interns on new projects.",
-          "Scaled HackerDraw to handle a large number of users, added features such as real-time collaboration, user access management etc.",
-          "Started new initiatives in the company which laid the foundation of an entirely new 'Labs Team' inside the company",
+          "Leading the improvements in Leaked Question Detection and Auto Replacement service.",
         ],
       },
       {
-        title: "SDE Intern I",
-        dateRange: "Jan 2024 - June 2024",
+        title: "SDE I",
+        dateRange: "Jan 2025 - Feb 2026",
         highlights: [
-          "I worked in a team of over eight people to build and provision scalable business infrastructure and customer solutions centered towards ed-tech industry.",
-          "I worked on a part of the flutter based mobile app, and on the entire web platform.",
-          "I designed & built user referral & user engagement analytic system for both of them to keep track of the watch seconds & position for each user, and derive enriched insights from those.",
+          "Led the development and integration of a new microservice responsible for assessing code quality in candidate's submissions, which is now a core part of our platform.",
+          "Made the Code Quality service resilient by increasing the service throughput 11x by increasing worker concurrency and queue-size based autoscaling.",
+          "Setup observability, monitoring, and alerting for the Code Quality service using New Relic, Grafana, Honeybadger, and Opsgenie.",
+          "Worked on multiple POCs to optimise for LLM cost, assessment accuracy, and fairness."
+        ],
+      },
+      {
+        title: "SDE Intern",
+        dateRange: "Jan 2024 - Dec 2024",
+        highlights: [
+          "Independently setup the foundations for our Code Quality microservice and rolled out the first version of product.",
+          "Revamped the flow for sending out assessment invites to the candidates by improving error messaing, and better UI/UX.",
+          "Optimised the initial platform load time by prefetching the content from server.",
         ],
       },
     ],
@@ -53,7 +61,7 @@ const experiences: Experience[] = [
 
 export default function ExperienceSection() {
   return (
-    <section id="experience" className="pt-20 md:pt-30">
+    <section id="experience" className="pt-30 2xl:pt-40">
       <div className="mb-8 md:mb-25">
         <Header title="Experience" />
       </div>

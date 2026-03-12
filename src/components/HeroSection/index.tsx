@@ -14,7 +14,7 @@ const links: LinkData[] = [
 
 export default function Hero() {
   return (
-    <header className="flex items-center py-20">
+    <header className="flex items-center mt-25">
       <div>
         <Image src="/hero/hero.png" width={200} height={200} alt="Portrait of Suyash Purwar" />
 
