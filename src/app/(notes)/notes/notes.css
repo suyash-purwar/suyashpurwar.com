@@ -27,7 +27,6 @@
 }
 
 .note-body {
-  font-weight: 300;
   line-height: 1.7;
   color: var(--secondary-color);
 }

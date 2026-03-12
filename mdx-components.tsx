@@ -4,24 +4,24 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     h1: (props) => (
       <h1
-        className="text-3xl font-semibold sm:text-4xl"
+        className="text-xl mb-4 mt-8 font-semibold"
         {...props}
       />
     ),
     h2: (props) => (
       <h2
-        className="mt-6 mb-4 text-2xl font-semibold sm:text-3xl"
+        className="mt-6 mb-4 text-lg font-semibold"
         {...props}
       />
     ),
     h3: (props) => (
       <h2
-        className="mt-6 mb-4 text-xl font-semibold sm:text-2xl"
+        className="mt-6 mb-4 text-md font-semibold"
         {...props}
       />
     ),
     p: (props) => (
-      <p className="mb-4 text-base/7" {...props} />
+      <p className="mb-2" {...props} />
     ),
     a: (props) => (
       <a
@@ -36,7 +36,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <ol className="mb-4 list-decimal space-y-1 pl-6" {...props} />
     ),
     code: (props) => (
-      <code className="rounded px-1 py-0.5 text-sm" {...props} />
+      <code className="rounded px-1 py-0.5" {...props} />
     ),
     pre: (props) => (
       <pre className="mb-4 overflow-x-auto rounded bg-neutral-900 p-4 text-sm text-neutral-50" {...props} />

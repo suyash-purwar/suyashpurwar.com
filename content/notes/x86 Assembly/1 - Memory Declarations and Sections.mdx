@@ -1,0 +1,175 @@
+---
+title: 1 - Memory Declarations and Sections
+---
+
+# NASM Program Structure
+
+A typical NASM program consists of three main sections:
+
+| Section | Purpose                            |
+| ------- | ---------------------------------- |
+| `.data` | Stores **initialized variables**   |
+| `.bss`  | Stores **uninitialized variables** |
+| `.text` | Contains the **executable code**   |
+
+Example structure:
+
+```asm
+section .data
+    ; initialized variables
+
+section .bss
+    ; uninitialized variables
+
+section .text
+global _start
+_start:
+    ; program instructions
+```
+
+
+# Data Section (`.data`)
+
+The `.data` section stores **variables that have initial values**.
+
+Example:
+
+```asm
+section .data
+    is_single db 1
+    year dw 2002
+    age dd 22
+    phone_no dq 9051765425
+```
+
+### Data Definition Directives
+
+| Directive | Meaning           | Size    |
+| --------- | ----------------- | ------- |
+| `db`      | Define Byte       | 1 byte  |
+| `dw`      | Define Word       | 2 bytes |
+| `dd`      | Define Doubleword | 4 bytes |
+| `dq`      | Define Quadword   | 8 bytes |
+
+### Example Variables
+
+| Variable    | Directive | Size    | Value        |
+| ----------- | --------- | ------- | ------------ |
+| `is_single` | `db`      | 1 byte  | `1`          |
+| `year`      | `dw`      | 2 bytes | `2002`       |
+| `age`       | `dd`      | 4 bytes | `22`         |
+| `phone_no`  | `dq`      | 8 bytes | `9051765425` |
+
+
+
+# BSS Section (`.bss`)
+
+BSS stands for **Block Started by Symbol**. The `.bss` section stores **uninitialized variables**.
+> `.data` stores initialized values in the executable file, while `.bss` only records the amount of memory needed and the OS allocates it when the program loads.
+
+Example:
+
+```asm
+section .bss
+    var1 resb 3
+    var2 resw 2
+    var3 resd 2
+    var4 resq 3
+```
+
+### Memory Reservation Directives
+
+| Directive | Meaning             |
+| --------- | ------------------- |
+| `resb`    | Reserve bytes       |
+| `resw`    | Reserve words       |
+| `resd`    | Reserve doublewords |
+| `resq`    | Reserve quadwords   |
+
+### Example Allocations
+
+| Variable | Directive | Allocation              |
+| -------- | --------- | ----------------------- |
+| `var1`   | `resb 3`  | 3 bytes                 |
+| `var2`   | `resw 2`  | 2 words = 4 bytes       |
+| `var3`   | `resd 2`  | 2 doublewords = 8 bytes |
+| `var4`   | `resq 3`  | 3 quadwords = 24 bytes  |
+
+# Global Variables
+
+Variables defined in `.data` and `.bss` are **static by default**.
+
+To make them accessible outside the file, use the `global` directive.
+
+Example:
+
+```asm
+global initialised_static_var
+global uninitialised_static_var
+```
+
+```asm
+section .data
+    initialised_static_var db 1
+```
+
+```asm
+section .bss
+    uninitialised_static_var resw 2
+```
+
+# Code Section (`.text`)
+
+The `.text` section contains executable instructions.
+
+Program execution starts at the `_start` label.
+
+Example:
+
+```asm
+section .text
+    global _start
+
+_start:
+    MOV eax, 0x1
+    MOV ebx, 0x69
+    INT 0x80
+```
+
+### Explanation
+
+| Instruction     | Meaning                        |
+| --------------- | ------------------------------ |
+| `MOV eax, 0x1`  | Sets syscall number for `exit` |
+| `MOV ebx, 0x69` | Exit code                      |
+| `INT 0x80`      | Triggers Linux system call     |
+
+`INT 0x80` invokes the **Linux kernel syscall handler** based on the value stored in the `EAX` register.
+
+
+# Why Does `dw` Mean 2 Bytes?
+
+The term **word** historically refers to the **natural register size of the CPU**.
+
+However in x86:
+
+| Term       | Size    |
+| ---------- | ------- |
+| Byte       | 8 bits  |
+| Word       | 16 bits |
+| Doubleword | 32 bits |
+| Quadword   | 64 bits |
+
+This convention exists because the earliest **x86 processors were 16-bit**, and Intel kept the naming consistent even after the architecture evolved to 32-bit and 64-bit processors.
+
+
+# Summary
+
+* > [Code File](https://github.com/suyash-purwar/learn-x86-assembly/blob/master/prog1/main.asm)
+* `.data` → initialized variables
+* `.bss` → uninitialized variables
+* `.text` → executable code
+* `db`, `dw`, `dd`, `dq` define memory with values
+* `resb`, `resw`, `resd`, `resq` reserve memory at runtime without initialization
+* `global` makes symbols accessible outside the file
+* `_start` is the entry point for the program
