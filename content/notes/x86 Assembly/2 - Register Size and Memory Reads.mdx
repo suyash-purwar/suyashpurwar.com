@@ -1,0 +1,232 @@
+---
+title: 2 - Register Size and Memory Reads
+---
+
+When reading values from memory in x86 assembly, the **number of bytes loaded depends on the destination register size**, not the size of the variable stored in memory.
+
+This can lead to unexpected results when reading small variables into larger registers.
+
+# The Problem
+
+Consider two variables stored as **1 byte each**.
+
+```asm
+section .data
+    num db 1
+    num2 db 2
+```
+
+Intuitively, we might expect the following instruction to load `1` into the register:
+
+```asm
+MOV ebx, [num]
+```
+
+However, this does **not** produce the expected result.
+
+Instead of `1`, the register ends up storing **513**.
+
+
+# Example Program
+
+```asm
+section .data
+    num db 1
+    num2 db 2
+
+section .text
+    global _start
+
+_start:
+    MOV eax, 1
+
+    MOV ebx, [num]
+    MOV ecx, [num2]
+
+    MOV bx, [num]
+    MOV cx, [num2]
+
+    MOV bl, [num]
+    MOV cl, [num2]
+
+    INT 0x80
+```
+
+
+# Why This Happens
+
+## Adjacent Memory Layout
+
+Variables declared in the `.data` section are stored **adjacent to each other in memory**.
+
+Example layout:
+
+| Address     | Value         |
+| ----------- | ------------- |
+| `0x804a000` | `01` (`num`)  |
+| `0x804a001` | `02` (`num2`) |
+| `0x804a002` | `00`          |
+| `0x804a003` | `00`          |
+
+
+# Register Size Determines Bytes Read
+
+The instruction
+
+```asm
+MOV ebx, [num]
+```
+
+loads data into `ebx`.
+
+`ebx` is a **32-bit register (4 bytes)**, so the CPU reads **4 bytes starting at `num`**.
+
+Addresses accessed:
+
+```txt
+0x804a000
+0x804a001
+0x804a002
+0x804a003
+```
+
+
+# Little-Endian Ordering
+
+x86 processors use **little-endian byte order**.
+
+This means the **least significant byte (LSB)** is stored at the **lowest memory address**.
+
+Memory:
+
+| Address     | Value |
+| ----------- | ----- |
+| `0x804a000` | `01`  |
+| `0x804a001` | `02`  |
+| `0x804a002` | `00`  |
+| `0x804a003` | `00`  |
+
+When loaded into the register:
+
+```txt
+ebx = 0x00000201
+```
+
+Decimal value:
+
+```txt
+513
+```
+
+# Why `MOV ecx, [num2]` Appears Correct
+
+Instruction:
+
+```asm
+MOV ecx, [num2]
+```
+
+Starting address:
+
+```txt
+0x804a001
+```
+
+Bytes read:
+
+```txt
+02 00 00 00
+```
+
+Result:
+
+```txt
+ecx = 0x00000002
+```
+
+This matches the expected value.
+
+# Using Sub-Registers
+
+x86 allows **partial access to registers**.
+
+For example:
+
+| Register | Size         |
+| -------- | ------------ |
+| `eax`    | 32-bit       |
+| `ax`     | 16-bit       |
+| `ah`     | upper 8 bits |
+| `al`     | lower 8 bits |
+
+
+# Reading Correctly Using Sub-Registers
+
+### Using 16-bit registers
+
+```asm
+MOV bx, [num]
+```
+
+`bx` reads **2 bytes**:
+
+```txt
+01 02
+```
+
+Result:
+
+```txt
+bx = 0x0201
+```
+
+Still not correct if we want only `1`.
+
+
+
+### Using 8-bit registers
+
+```asm
+MOV bl, [num]
+MOV cl, [num2]
+```
+
+Only **1 byte** is read.
+
+Results:
+
+```txt
+bl = 0x01
+cl = 0x02
+```
+
+
+
+# Modern x86 Register Naming
+
+| Architecture | Example Registers   |
+| ------------ | ------------------- |
+| 32-bit       | `eax`, `ebx`, `ecx` |
+| 64-bit       | `rax`, `rbx`, `rcx` |
+
+Sub-registers exist for both.
+
+Example hierarchy:
+
+```txt
+rax
+ └── eax
+      └── ax
+           ├── ah
+           └── al
+```
+
+
+
+# Summary
+
+* The **destination register size determines how many bytes are read from memory**.
+* Variables declared with `db` occupy **1 byte**.
+* Loading them into larger registers can unintentionally read **neighboring memory**.
+* x86 uses **little-endian byte ordering**.
+* Use **sub-registers (`al`, `bl`, etc.)** when reading byte-sized values.
