@@ -1,0 +1,250 @@
+---
+title: 5 - ADD, SUB, and, EFLAGS register
+---
+
+Arithmetic instructions in x86 not only compute results but also update processor flags that describe properties of the result.
+
+These flags are stored in the **EFLAGS register**, a special register used by the CPU to track conditions such as carry, overflow, zero results, and sign.
+
+
+# Example Program
+
+```asm
+section .text
+global _start
+
+_start:
+    MOV eax, 0x1
+    MOV bl, 0b11111111
+    MOV cl, 0b11
+
+    ADD bl, cl
+
+    ADC bh, bl
+
+    MOV bl, 0x45
+    MOV cl, 0x1F
+    SUB bl, cl
+
+    MOV bl, 0xA
+    MOV cl, 0xA
+    SUB bl, cl
+
+    MOV bl, 0xD
+    MOV cl, 0xF3
+    SUB bl, cl
+
+    INT 0x80
+```
+
+
+# The EFLAGS Register
+
+The EFLAGS register is a special-purpose register that stores various **status, control, and system flags**.
+
+Each bit in this register represents a condition produced by the last executed instruction.
+
+These flags are automatically modified by CPU instructions to record the outcome of operations.
+
+Examples of commonly used flags:
+
+| Flag | Meaning               |
+| ---- | --------------------- |
+| CF   | Carry Flag            |
+| PF   | Parity Flag           |
+| AF   | Auxiliary Carry Flag  |
+| ZF   | Zero Flag             |
+| SF   | Sign Flag             |
+| OF   | Overflow Flag         |
+| IF   | Interrupt Enable Flag |
+
+Not all instructions affect all flags, but arithmetic operations typically modify several of them.
+
+
+# Example 1: Addition and Carry Flag
+
+```asm
+MOV bl, 0b11111111
+MOV cl, 0b11
+ADD bl, cl
+```
+
+Values:
+
+```txt
+bl = 11111111
+cl = 00000011
+```
+
+Binary addition:
+
+```txt
+11111111
++00000011
+---------
+1 00000010
+```
+
+Result stored in `bl`:
+
+```txt
+00000010
+```
+
+Since `bl` is an 8-bit register, only the lower 8 bits are stored.
+
+The extra bit (`1`) becomes a carry.
+
+This carry does not propagate to the next register (`bh`).
+
+Instead, the CPU records this event in the **Carry Flag (CF)** inside the EFLAGS register.
+
+Flags raised by this operation include:
+
+```txt
+CF = 1
+AF = 1
+```
+
+
+# Using the Carry with `ADC`
+
+The instruction:
+
+```asm
+ADC bh, bl
+```
+
+means:
+
+```txt
+bh = bh + bl + CF
+```
+
+Unlike `ADD`, `ADC` also includes the **Carry Flag** in the computation.
+
+This instruction is commonly used when performing **multi-byte arithmetic**.
+
+Example scenario:
+
+```txt
+16-bit addition implemented using two 8-bit operations
+```
+
+```txt
+ADD low_byte
+ADC high_byte
+```
+
+This allows carry from the lower byte to propagate into the higher byte.
+
+
+# Example 2: Subtraction
+
+```asm
+MOV bl, 0x45
+MOV cl, 0x1F
+SUB bl, cl
+```
+
+Calculation:
+
+```txt
+0x45 - 0x1F = 0x26
+```
+
+Result stored in `bl`:
+
+```txt
+bl = 0x26
+```
+
+No special flags of interest are triggered here.
+
+
+# Example 3: Zero Flag
+
+```asm
+MOV bl, 0xA
+MOV cl, 0xA
+SUB bl, cl
+```
+
+Calculation:
+
+```txt
+10 - 10 = 0
+```
+
+Result:
+
+```txt
+bl = 0
+```
+
+This raises the **Zero Flag (ZF)**.
+
+```txt
+ZF = 1
+```
+
+The Zero Flag is frequently used for comparisons and conditional jumps.
+
+
+# Example 4: Subtraction with Signed Values
+
+```asm
+MOV bl, 0xD      ; 13
+MOV cl, 0xF3     ; -13 (two's complement representation)
+SUB bl, cl
+```
+
+Calculation:
+
+```txt
+13 - (-13) = 26
+```
+
+Result:
+
+```txt
+bl = 26
+```
+
+During this operation the **Carry Flag (CF)** is raised.
+
+In subtraction, CF indicates that a **borrow occurred**.
+
+
+# Important Notes About Flags
+
+Flags provide information about the result of the last instruction. Some common interpretations are:
+
+| Flag | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| CF   | Carry out of the most significant bit (or borrow in subtraction) |
+| ZF   | Result equals zero                                               |
+| SF   | Result is negative (sign bit set)                                |
+| OF   | Signed arithmetic overflow                                       |
+| PF   | Result has even parity                                           |
+| AF   | Carry between lower nibbles (used in BCD arithmetic)             |
+
+These flags are often used with conditional jump instructions such as:
+
+```txt
+JE
+JNE
+JC
+JZ
+JG
+JL
+```
+
+# Summary
+
+* Arithmetic instructions modify the EFLAGS register.
+* The Carry Flag (CF) indicates carry or borrow during arithmetic.
+* The Zero Flag (ZF) indicates that the result is zero.
+* The Auxiliary Carry Flag (AF) indicates carry between lower nibbles.
+* `ADC` allows arithmetic to include the carry flag, which is useful for multi-byte operations.
+* Flags are essential for implementing conditional logic and comparisons in assembly.
