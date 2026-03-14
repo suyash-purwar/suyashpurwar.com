@@ -1,0 +1,217 @@
+---
+title: 4 - Operand Size and Memory-to-Memory Restrictions
+---
+
+When writing assembly, the CPU instructions must have **fully specified operand sizes**. If an instruction does not make the operand size clear, the assembler cannot encode it.
+
+Additionally, the `MOV` instruction in x86 **does not allow both operands to be memory locations**, which means data must often pass through a register.
+
+This note demonstrates both of these rules.
+
+
+# The Experiment
+
+Consider the following program:
+
+```asm
+section .bss
+    var1 resb 2
+
+section .data
+    var2 db 6
+
+section .text
+global _start
+
+_start:
+    MOV eax, 0x1
+    MOV ebx, 0x1
+
+    MOV byte [var2], 0x45
+
+    MOV bl, [var2]
+    MOV [var1], bl
+
+    INT 0x80
+```
+
+
+# Problem 1: Writing a Constant to Memory
+
+Suppose we try the following instruction:
+
+```asm
+MOV [var2], 0x45
+```
+
+This instruction fails to assemble.
+
+The reason is that the **operand size is ambiguous**. The assembler must generate machine code that specifies the exact number of bytes being written to memory.
+
+Possible interpretations include:
+
+```asm
+MOV byte  [var2], 0x45
+MOV word  [var2], 0x45
+MOV dword [var2], 0x45
+```
+
+Since the instruction itself does not indicate the size, the assembler rejects it.
+
+
+# Explicitly Specifying the Operand Size
+
+To resolve the ambiguity, the operand size must be specified explicitly.
+
+```asm
+MOV byte [var2], 0x45
+```
+
+This tells the assembler:
+
+```txt
+Write one byte (0x45) to the address of var2
+```
+
+Once the size is known, the assembler can generate the correct machine instruction.
+
+
+# Why the Assembler Does Not Infer the Size
+
+You might wonder:
+
+> “But `var2` was declared using `db`, which defines a byte. Why can't the assembler infer the size from that?”
+
+Example declaration:
+
+```asm
+var2 db 6
+```
+
+This directive:
+
+* reserves **one byte in memory**
+* assigns a **label (`var2`) to that memory address**
+
+However, in assembly, **labels are primarily treated as addresses**, not typed variables like in high-level languages.
+
+Although the assembler internally knows the size used in the declaration, it **does not automatically infer operand size from the symbol** when encoding instructions. Instead, it requires the programmer to specify the size when the instruction is ambiguous.
+
+This is a design choice that keeps assembly instructions **explicit and predictable**.
+
+
+# Problem 2: Memory-to-Memory Transfers
+
+Consider the instruction:
+
+```asm
+MOV word [var1], [var2]
+```
+
+This attempts to move data directly from one memory location to another.
+
+```txt
+memory → memory
+```
+
+The `MOV` instruction does **not allow both operands to be memory operands**.
+
+Most x86 instructions follow the rule:
+
+```txt
+At most one operand can refer to memory
+```
+
+
+# Correct Approach
+
+Data must pass through a register.
+
+```txt
+memory → register → memory
+```
+
+Example:
+
+```asm
+MOV bl, [var2]
+MOV [var1], bl
+```
+
+Step-by-step:
+
+1. Load the value at `var2` into register `bl`
+2. Store the value from `bl` into memory at `var1`
+
+
+# Memory Layout
+
+### `var1`
+
+```asm
+var1 resb 2
+```
+
+This reserves **2 bytes of uninitialized memory**.
+
+### `var2`
+
+```asm
+var2 db 6
+```
+
+This stores a **single byte** with value: `6`
+
+After the instruction:
+
+```asm
+MOV byte [var2], 0x45
+```
+
+Memory becomes:
+
+```txt
+var2 = 0x45
+```
+
+Then:
+
+```asm
+MOV bl, [var2]
+MOV [var1], bl
+```
+
+Result:
+
+```txt
+var1[0] = 0x45
+var1[1] = unchanged (undefined)
+```
+
+Only **one byte** is written because the register `bl` is **8 bits wide**.
+
+
+# Summary
+
+* The assembler must know the **exact operand size** to encode an instruction.
+
+* If the instruction does not make the size clear, it must be specified explicitly using:
+
+  ```txt
+  byte
+  word
+  dword
+  qword
+  ```
+
+* Labels in assembly represent **addresses**, not typed variables.
+
+* The `MOV` instruction **does not support memory-to-memory operands**.
+
+* Most x86 instructions allow **at most one memory operand**.
+
+* Data movement typically follows the pattern:
+
+```txt
+memory → register → memory
+```

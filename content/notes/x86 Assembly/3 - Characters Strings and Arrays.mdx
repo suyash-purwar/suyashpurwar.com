@@ -1,0 +1,253 @@
+---
+title: 3 - Characters, Strings, and Arrays
+---
+
+Characters, strings, and arrays are simply **sequences of bytes stored in memory**. Assembly does not treat strings as special types; they are just **contiguous blocks of memory**.
+
+This note demonstrates how characters, strings, and lists are stored and accessed in assembly.
+
+# The Experiment
+
+Consider the following program:
+
+```asm
+section .data
+    char DB "A", 0
+    string DB "Suyash", 0
+    list DB 43,77,9,18
+
+    string2 DW "Hello", 0
+
+section .text
+global _start
+
+_start:
+    MOV eax, 0x1
+
+    MOV bl, [char]
+    MOV cl, [string]
+    MOV dl, [list]
+
+    MOV bl, [string + 2]
+    MOV bh, [string + 1]
+    MOV cl, [list + 3]
+    MOV ch, [list + 2]
+
+    MOV dx, [string2]
+
+    INT 0x80
+```
+
+# 1. Characters in Assembly
+
+Example:
+
+```asm
+char DB "A", 0
+```
+
+Explanation:
+
+* `"A"` is stored as its **ASCII value**.
+* ASCII value of `'A'` is **65**.
+* The extra `0` represents the **null terminator**.
+
+Memory layout:
+
+| Address  | Value    |
+| -------- | -------- |
+| `char`   | 65 (`A`) |
+| `char+1` | 0        |
+
+Reading the value:
+
+```asm
+MOV bl, [char]
+```
+
+Result:
+
+```txt
+bl = 65
+```
+
+# 2. Strings in Assembly
+
+Example:
+
+```asm
+string DB "Suyash", 0
+```
+
+Each character occupies **1 byte**.
+
+Memory layout:
+
+| Offset     | Character | ASCII           |
+| ---------- | --------- | --------------- |
+| `string+0` | `S`       | 83              |
+| `string+1` | `u`       | 117             |
+| `string+2` | `y`       | 121             |
+| `string+3` | `a`       | 97              |
+| `string+4` | `s`       | 115             |
+| `string+5` | `h`       | 104             |
+| `string+6` | `0`       | null terminator |
+
+Example access:
+
+```asm
+MOV cl, [string]
+```
+
+Result:
+
+```txt
+cl = ASCII('S')
+```
+
+# 3. Accessing Characters Using Offsets
+
+Since characters are stored sequentially, individual characters can be accessed using **offsets**.
+
+Example:
+
+```asm
+MOV bl, [string + 2]
+```
+
+This accesses:
+
+```txt
+string + 2 → 'y'
+```
+
+Result:
+
+```txt
+bl = ASCII('y')
+```
+
+Another example:
+
+```asm
+MOV bh, [string + 1]
+```
+
+Result:
+
+```txt
+bh = ASCII('u')
+```
+
+# 4. Arrays in Assembly
+
+Assembly arrays are simply **sequences of values stored in contiguous memory**.
+
+Example:
+
+```asm
+list DB 43,77,9,18
+```
+
+Memory layout:
+
+| Offset   | Value |
+| -------- | ----- |
+| `list+0` | 43    |
+| `list+1` | 77    |
+| `list+2` | 9     |
+| `list+3` | 18    |
+
+Access examples:
+
+```asm
+MOV dl, [list]
+```
+
+Result:
+
+```txt
+dl = 43
+```
+
+Accessing elements by index:
+
+```asm
+MOV cl, [list + 3]
+```
+
+Result:
+
+```txt
+cl = 18
+```
+
+Another example:
+
+```asm
+MOV ch, [list + 2]
+```
+
+Result:
+
+```txt
+ch = 9
+```
+
+
+# 5. Using `DW` for Strings
+
+Example:
+
+```asm
+string2 DW "Hello", 0
+```
+
+Directive `DW` means **define word (2 bytes)**.
+
+This means:
+
+* Each character now occupies **2 bytes instead of 1**.
+
+Memory usage:
+
+```txt
+"H" → 2 bytes
+"e" → 2 bytes
+"l" → 2 bytes
+"l" → 2 bytes
+"o" → 2 bytes
+null terminator → 2 bytes
+```
+
+Total memory:
+
+```txt
+6 × 2 = 12 bytes
+```
+
+
+# 6. Reading a Word From Memory
+
+Instruction:
+
+```asm
+MOV dx, [string2]
+```
+
+* `dx` is a **16-bit register**.
+* It reads **2 bytes** from memory.
+
+This loads the first character `"H"` into the register.
+
+
+# Summary
+
+* [Code File](https://github.com/suyash-purwar/learn-x86-assembly/blob/master/prog3/main.asm)
+* Assembly has no built-in string type; strings are simply arrays of bytes.
+* `DB` stores 1 byte per value.
+* Characters are stored using their ASCII values.
+* Arrays and strings are stored in contiguous memory locations.
+* Elements can be accessed using offsets (`label + index`).
+* `DW` allocates 2 bytes per element, which can also be used for wide characters.
+* The register size determines how many bytes are read from memory.
