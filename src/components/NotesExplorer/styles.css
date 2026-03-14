@@ -115,26 +115,21 @@
 /* File link */
 .tree-link {
   display: block;
-  padding: 4px 8px 4px 26px;
+  padding: 4px 8px;
   color: var(--secondary-color);
   text-decoration: none;
   font-size: 0.85rem;
-  font-weight: 300;
   border-radius: 4px;
   transition: background-color 0.15s ease, color 0.15s ease;
-  opacity: 0.8;
 }
 
 .tree-link:hover {
-  background-color: var(--quaternary-color);
-  opacity: 1;
+  font-weight: 500;
 }
 
 .tree-link.active {
   color: var(--primary-color);
   font-weight: 500;
-  opacity: 1;
-  background-color: var(--quaternary-color);
 }
 
 .tree-label {
