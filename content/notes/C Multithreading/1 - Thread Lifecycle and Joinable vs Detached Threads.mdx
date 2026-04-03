@@ -265,7 +265,7 @@ After 10 seconds:
 
 Possible output sequence:
 
-```
+```txt
 Thread1 worker
 Main thread
 Thread2 worker
@@ -295,7 +295,7 @@ Two common patterns:
 
 Use when the result or completion matters.
 
-```
+```txt
 create → join
 ```
 
@@ -303,6 +303,6 @@ create → join
 
 Use when the thread is independent.
 
-```
+```txt
 create → detach → forget
 ```
