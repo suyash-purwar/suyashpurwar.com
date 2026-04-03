@@ -100,9 +100,7 @@ The main thread:
 This constant determines:
 
 - Number of worker threads created
-    
 - Size of thread tracking arrays
-    
 
 ```c
 pthread_t thread[NUM_THREADS];
@@ -110,9 +108,7 @@ void* thread_result[NUM_THREADS];
 ```
 
 - `thread[]` stores **thread identifiers**
-    
 - `thread_result[]` stores **returned values from threads**
-    
 
 
 # 3. Worker Thread Function
@@ -128,8 +124,7 @@ Why is the allocation needed one might ask. Every thread has it's separate stack
 
 In order to avoid the loss of results, we make use of Heap memory which lives beyond a thread's lifecycle. Otherwise, we would end up with a dangling pointer.
 
-> Rule of Thumb
-> Data returned by threads must live on the **heap**, not the stack.  
+Data returned by threads must live on the **heap**, not the stack.  
 
 The other thing to note here is the cleanup of argument memory. Arguments of the threads here are dynamically allocated and needs to be freed to avoid the memory leaks.
 
@@ -224,8 +219,8 @@ pthread_join(thread[i], &thread_result[i]);
 
 `pthread_join` performs two tasks:
 
-1. **Blocks until the thread terminates**
-2. **Retrieves the value returned by the thread**
+1. Blocks until the thread terminates
+2. Retrieves the value returned by the thread
 
 The returned value is stored in:
 
