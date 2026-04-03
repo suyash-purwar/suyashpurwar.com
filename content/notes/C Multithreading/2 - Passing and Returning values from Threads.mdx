@@ -1,0 +1,236 @@
+---
+title: 2 - Passing and Returning values from Threads
+---
+
+# Practice Program
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define NUM_THREADS 4
+
+void* worker(void* arg) {
+  printf("Thread %d: Executing\n", *(int*)arg);
+
+  const int thread_id = *(int*)arg;
+  void* result = calloc(1, sizeof(double));
+
+  for (int i = 0; i < 1000000; i++) {
+    *(double*)result += sin(thread_id) + tan(thread_id);
+  }
+
+  printf("Thread %d: Completed\n", thread_id);
+
+  free(arg);
+  pthread_exit(result);
+}
+
+int main() {
+  pthread_t thread[NUM_THREADS];
+  void* thread_result[NUM_THREADS];
+
+  pthread_attr_t attr;
+
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    printf("Thread %d: Creating\n", i);
+
+    void* thread_arg = malloc(sizeof(int));
+    *(int*)thread_arg = i;
+
+    const int creation_status = pthread_create(&thread[i], &attr, worker, thread_arg);
+
+    if (creation_status) {
+      printf("Thread %d: Unable to create thread\n", i);
+    }
+  }
+
+  pthread_attr_destroy(&attr);
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    const int join_status = pthread_join(thread[i], &thread_result[i]);
+
+    if (join_status) {
+      printf("Thread %d: Unable to join thread\n", i);
+    }
+  }
+
+  printf("Results from threads:-\n");
+  for (int i = 0; i < NUM_THREADS; i++) {
+    printf("Thread %d: Result - %f\n", i, *(double*)thread_result[i]);
+
+    free(thread_result[i]);
+  }
+
+  return 0;
+}
+```
+
+
+# 1. Program Overview
+
+The program creates four worker threads that perform a CPU-bound computation and return the result to the main thread.
+
+Each thread:
+
+1. Receives a thread identifier
+2. Performs a mathematical computation
+3. Stores the result in dynamically allocated memory
+4. Returns the result to the main thread
+
+The main thread:
+
+1. Creates worker threads
+2. Waits for them to finish using `pthread_join`
+3. Collects their results
+4. Frees the allocated memory
+
+
+# 2. Defining the Number of Threads
+
+```c
+#define NUM_THREADS 4
+```
+
+This constant determines:
+
+- Number of worker threads created
+    
+- Size of thread tracking arrays
+    
+
+```c
+pthread_t thread[NUM_THREADS];
+void* thread_result[NUM_THREADS];
+```
+
+- `thread[]` stores **thread identifiers**
+    
+- `thread_result[]` stores **returned values from threads**
+    
+
+
+# 3. Worker Thread Function
+
+
+```c
+void* result = calloc(1, sizeof(double));
+```
+
+The worker thread function allocs space to store the result from the computation.
+
+Why is the allocation needed one might ask. Every thread has it's separate stack and the local variables are items of the stack. When the functions exits, all the resources are freed, including the stack.
+
+In order to avoid the loss of results, we make use of Heap memory which lives beyond a thread's lifecycle. Otherwise, we would end up with a dangling pointer.
+
+> Rule of Thumb
+> Data returned by threads must live on the **heap**, not the stack.  
+
+The other thing to note here is the cleanup of argument memory. Arguments of the threads here are dynamically allocated and needs to be freed to avoid the memory leaks.
+
+```c
+free(arg);
+```
+
+Lastly, the results are returned by using
+
+```c
+pthread_exit(result);
+```
+
+`pthread_exit` terminates the thread and passes a pointer back to the joining thread.
+
+Equivalent alternative:
+
+```c
+return result;
+```
+
+
+# 4. Thread Attributes
+
+Thread attributes allow configuring thread behavior.
+
+```c
+pthread_attr_t attr;
+```
+
+### Initialize attributes
+
+```c
+pthread_attr_init(&attr);
+```
+
+### Set detach state
+
+```c
+pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+```
+
+This explicitly sets threads to **joinable**.
+
+Although many implementations default to joinable threads, explicitly setting this improves portability and clarity.
+
+
+# 5. Creating Threads
+
+Threads are created inside a loop.
+
+```c
+void* thread_arg = malloc(sizeof(int));
+*(int*)thread_arg = i;
+```
+
+A separate argument is allocated for each thread.
+
+This is important because passing the address of `i` directly would create a **race condition**, where all threads read the same variable as it changes.
+
+Thread creation:
+
+```c
+pthread_create(&thread[i], &attr, worker, thread_arg);
+```
+
+Parameters:
+
+1. Thread identifier storage
+2. Thread attributes
+3. Worker function
+4. Argument passed to the thread
+
+
+# 6. Destroying Thread Attributes
+
+Once all threads are created, attributes are no longer needed.
+
+```c
+pthread_attr_destroy(&attr);
+```
+
+This releases resources used by the attribute object.
+
+# 7. Waiting for Threads to Finish
+
+The main thread waits for each worker thread.
+
+```c
+pthread_join(thread[i], &thread_result[i]);
+```
+
+`pthread_join` performs two tasks:
+
+1. **Blocks until the thread terminates**
+2. **Retrieves the value returned by the thread**
+
+The returned value is stored in:
+
+```c
+thread_result[i]
+```
+
+Each entry is a pointer to the result computed by a thread.
