@@ -1,0 +1,349 @@
+---
+title: 5 - Thread Cancellation and Cleanup Handlers
+---
+
+# Practice Program
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/**
+ * A thread can be cancelled in the middle of its execution in two ways
+ *  - Deferred Cancellation (PTHREAD_CANCEL_DEFERRED): Thread gets cancelled at specific safe points. This is default state.
+ *  - Asynchronous Cancellation (PTHREAD_CANCEL_ASYNCHRONOUS): Thread gets cancelled at any point.
+ *
+ * A thread also has it's cancellability which means. There are two types.
+ *  - Cancellable (PTHREAD_CANCEL_ENABLE): Thread is cancellable. This is the default state.
+ *  - Not Cancellable (PTHREAD_CANCEL_DISABLE): Thread is not cancellable.
+ *
+ * Why would we need the ability to cancel a thread execution midway?
+ *  - Killing an expensive SQL query
+ *  - Cancelling any operation that is no longer needed
+ *
+ * Note how `pthread_setcancelstate` and `pthread_setcanceltype` do not take thread handler as the input. How does it
+ * know which thread needs to be targeted? Whichever thread's stack executes the function, the change applies to that
+ * thread.
+ *
+ * Call signature
+ *  - `int pthread_setcancelstate(int state, int *oldstate);`
+ *  - `int pthread_setcanceltype(int type, int *oldtype);`
+ *
+ * The previous cancellability state of the thread is returned in the buffer pointed to by `oldstate`.
+ *
+ * Thread cancellation is done by the `pthread_cancel(pthread_t)` function. Thread cancellation in pthreads is actually
+ * implemented using signals internally on Linux.
+ *
+ * Imp Note:
+ *  - The thread's cancellability type determines when a cancellable thread will respond to a cancellation request. If
+ *    a cancellation request is received and the thread is so far not cancellable, it is blocked until cancellability
+ *    is enabled.
+ *  - Briefly disabling cancellability is useful if a thread performs some critical action that must not be interrupted
+ *    by a cancellation request.  Beware of disabling cancellability for long periods, or around operations that may
+ *    block for long periods, since that will render the thread unresponsive to cancellation requests.
+ *
+ * Issue of Resource Leakage and Invariants
+ * - As asynchronous thread can be cancelled at any point of execution. This leads to the issue of resource leakage,
+ *   invariants, and deadlocks
+ * - Resource leakage: Thread gets cancelled after malloc and before the memory could be freed. Memory leak
+ * - Invariants: Imagine a scenario where a thread is appending a new node to a linked list at head position. It
+ *   requires multiple pointer changes. A thread might get cancelled in the middle of these operations causing the
+ *   data structured to corrupt.
+ * - Deadlocks: Consider a scenario where a thread has take a mutex lock on some resource and gets cancelled. This leads
+ *   to lock never getting released. Another thread which requires this resource would be in a deadlock state.
+ *
+ * It is essential that resources are properly released and invariants are prevented before the thread is cancelled. To
+ * solve this problem, POSIX pthread makes use of cleanup handlers.
+ *
+ * For each thread, Cleanup Handler Stack is maintained where the resource cleanup handlers (function pointers) are
+ * pushed as more resources are taken. The items from the stack are invoked and popped when a thread is cancelled  or
+ * calls pthread_exit.
+ *
+ * Call signature:
+ * - `pthread_cleanup_push((void* cleanup_handler)(void*), void* arg)`: `cleanup_handler` is called with `arg` as
+ *   parameter,
+ * - pthread_cleanup_pop(int): It takes off the top item in the stack. There are two modes in this function. If 0 is
+ *   passed as input, only the item is popped. If 1 is passed, the top most item is invoked as well.
+ *
+ * Both these functions are macros.
+ *
+ * Note: The cleanup handlers are not invoked when thread exits by the virtue of the `return` statement.
+ */
+
+#define WORKER_THREADS 5
+
+pthread_t threads[WORKER_THREADS];
+
+void cleanup_thread_arg(void* arg) {
+    printf("Invoked cleanup_thread_arg");
+    free(arg);
+}
+
+void close_thread_file(void* arg) {
+    printf("Invoked close_thread_file");
+    fclose(arg);
+}
+
+void* write_to_file(void* th_id) {
+    char file_name[64];
+    char file_contents[128];
+    const char thread_id = *(char*)th_id;
+    int counter = 0;
+
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
+    pthread_cleanup_push(cleanup_thread_arg, th_id);
+
+    sprintf(file_name, "./files/thread_%d.txt", thread_id);
+    FILE* file = fopen(file_name, "w");
+
+    pthread_cleanup_push(close_thread_file, file);
+
+    if (file == NULL) {
+        perror("Failed to open the file");
+        pthread_exit(NULL);
+    }
+
+    while (counter < 75) {
+        const int file_content_len = sprintf(file_contents, "%d: This is thread %d\n", counter, thread_id);
+
+        fwrite(file_contents, sizeof(char), file_content_len, file);
+        fflush(file);
+
+        counter++;
+        sleep(1);
+    }
+
+    pthread_cleanup_pop(1);
+    pthread_cleanup_pop(1);
+
+    return NULL;
+}
+
+void cancel_thread(const char thread_id) {
+    const char thread_cancel_status = pthread_cancel(threads[thread_id]);
+
+    if (thread_cancel_status) {
+        printf("Failed to cancel thread: %d", thread_id);
+    }
+}
+
+
+void menu() {
+    short int choice = -1;
+
+    while (1) {
+        printf("Enter the thread id to cancel [0-%d]: ", WORKER_THREADS - 1);
+        scanf("%hd", &choice);
+
+        if (choice < 0 || choice > WORKER_THREADS - 1) {
+            printf("Incorrect thread id %d.\n", choice);
+            exit(0);
+        }
+
+        cancel_thread(choice);
+    }
+}
+
+int main() {
+    pthread_attr_t thread_attr;
+
+    pthread_attr_init(&thread_attr);
+    pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED);
+
+    for (int i = 0; i < WORKER_THREADS; i++) {
+        char* thread_arg = calloc(1, sizeof(char));
+        *thread_arg  = i;
+
+        const char thread_create_status = pthread_create(&threads[i], &thread_attr, write_to_file, thread_arg);
+
+        if (thread_create_status) {
+            printf("Failed to create thread %d\n", i);
+            exit(-1);
+        }
+    }
+
+    menu();
+
+    return 0;
+}
+```
+
+
+# 1. Overview of Thread Cancellation
+
+Thread cancellation allows one thread to request termination of another thread.
+
+In POSIX threads, cancellation is performed using:
+
+```c
+pthread_cancel(thread_id);
+```
+
+However, cancellation does not immediately terminate a thread. Instead, it sends a cancellation request that the target thread must respond to.
+
+
+# 2. Cancellability State
+
+A thread can control whether it can be cancelled.
+
+Two states exist:
+
+|State|Meaning|
+|---|---|
+|`PTHREAD_CANCEL_ENABLE`|Thread can be cancelled (default)|
+|`PTHREAD_CANCEL_DISABLE`|Cancellation requests are ignored|
+
+Example from the program:
+
+```c
+pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+```
+
+This ensures that the worker thread **accepts cancellation requests**.
+
+
+# 3. Cancellation Type
+
+The cancellation type determines _when_ a thread reacts to a cancellation request.
+
+|Type|Behavior|
+|---|---|
+|`PTHREAD_CANCEL_DEFERRED`|Thread cancels only at defined cancellation points (default)|
+|`PTHREAD_CANCEL_ASYNCHRONOUS`|Thread can be cancelled at any instruction|
+
+In the program:
+
+```c
+pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+```
+
+This allows the thread to be cancelled at any moment during execution.
+
+`pthread_setcancelstate` and `pthread_setcanceltype` do not take a thread ID. They modify the cancellation behavior of the thread that calls the function. This works because each thread executes on its own stack and execution context.
+
+
+# 4. Why Thread Cancellation Is Useful
+
+Thread cancellation is useful when long-running tasks need to be aborted.
+
+Typical scenarios include:
+
+- Cancelling expensive database queries
+- Terminating unnecessary background work
+- Stopping tasks when a user cancels an operation
+
+
+# 5. Risks of Asynchronous Cancellation
+
+Asynchronous cancellation is dangerous because a thread may be terminated in the middle of critical operations.
+
+Potential problems include:
+
+### Resource Leakage
+
+A thread may allocate memory but get cancelled before freeing it.
+
+Example:
+
+```c
+malloc(...)
+cancelled
+```
+
+Memory remains allocated.
+
+
+### Broken Invariants
+
+Consider modifying a linked list:
+
+```
+node->next = head
+head = node
+```
+
+If cancellation occurs between these operations, the data structure becomes corrupted.
+
+
+### Deadlocks
+
+If a thread holds a mutex lock and gets cancelled before releasing it, other threads waiting for that lock will **block forever**.
+
+
+# 6. Cleanup Handlers
+
+To solve these issues, POSIX threads provide cleanup handlers.
+
+A cleanup handler is a function that is automatically executed when a thread:
+
+- is cancelled
+- calls `pthread_exit`
+
+Each thread maintains a cleanup handler stack.
+
+Handlers are executed in Last-In-First-Out (LIFO) order.
+
+
+# 7. Registering Cleanup Handlers
+
+Handlers are registered using:
+
+```c
+pthread_cleanup_push(handler_function, arg);
+```
+
+Example from the program:
+
+```c
+pthread_cleanup_push(cleanup_thread_arg, th_id);
+```
+
+This ensures the dynamically allocated thread argument is freed if the thread is cancelled.
+
+Another handler closes the file:
+
+```c
+pthread_cleanup_push(close_thread_file, file);
+```
+
+
+# 8. Removing Cleanup Handlers
+
+Handlers are removed using:
+
+```c
+pthread_cleanup_pop(execute);
+```
+
+Behavior depends on the argument:
+
+|Value|Behavior|
+|---|---|
+|`0`|Remove handler without executing it|
+|`1`|Execute handler and remove it|
+
+In the program:
+
+```c
+pthread_cleanup_pop(1);
+```
+
+This executes the cleanup function.
+
+# 9. Program Workflow
+
+1. Main thread creates five detached worker threads.
+2.  Each worker thread:
+	- Opens a file
+	- Writes data repeatedly
+	- Registers cleanup handlers
+3. The program presents a menu allowing the user to cancel any thread interactively.
+4. When a thread is cancelled:
+	- cleanup handlers run
+	- allocated memory is freed
+	- open file is closed
