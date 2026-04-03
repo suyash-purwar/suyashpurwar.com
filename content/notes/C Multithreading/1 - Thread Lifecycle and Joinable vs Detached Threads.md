@@ -1,0 +1,308 @@
+---
+title: 1 - Thread Lifecycle and Joinable vs Detached Threads
+---
+
+
+# Practice Program
+
+```c
+#include <stdio.h>
+#include <pthread.h>
+#include <unistd.h>
+
+void* worker1()
+{
+    printf("Thread1 worker\n");
+    sleep(2);
+    return NULL;
+}
+
+void* worker2(void* arg) {
+    char* str = (char*)arg;
+
+    while (1) {
+        printf("%s\n", str);
+        sleep(1);
+    }
+}
+
+/**
+ * Here, we have not specified whether a thread is joinable or detachable. It is recommended to explicitly define
+ * a thread as joinable or detachable based on the expected behaviour as some implementations might have a different
+ * default.
+ *
+ * A joinable thread can be made detachable through `pthread_detachable` function.
+ */
+int main()
+{
+    pthread_t tid1;
+    pthread_t tid2;
+
+    pthread_create(&tid1, NULL, worker1, NULL);
+
+    /**
+     * `pthread_join` function blocks the main thread until the called thread terminates or calls pthread_exit
+     * This function frees up the resources used by the thread. If this function is not called for joinable thread,
+     * the thread after completing it's work becomes a zombie thread. The difference between joinable and detachable
+     * thread is that detachable thread automatically frees up the resource after completing it's work whereas a
+     * joinable thread doesn't
+     */
+    pthread_join(tid1, NULL);
+
+    static char* string = "Thread2 worker";
+    pthread_create(&tid2, NULL, worker2, (void*)string);
+    /**
+     * `pthread_join` is never called for thread 2 and it becomes a zombie thread. It's resources are deallocated when
+     * the main thread terminates.
+     */
+
+    printf("Main thread\n");
+
+    sleep(10);
+
+    return 0;
+}
+```
+
+
+# 1. Creating Threads
+
+Threads in the pthread library are created using:
+
+```c
+pthread_create(&thread_id, attr, start_routine, arg);
+```
+
+### Parameters
+
+- **thread_id**  
+    Pointer to `pthread_t` where the thread identifier will be stored.
+- **attr**  
+    Thread attributes.  
+    `NULL` means default attributes are used.
+- **start_routine**  
+    Function executed by the thread.
+- **arg**  
+    Argument passed to the thread function.
+
+### Example
+
+```c
+pthread_create(&tid1, NULL, worker1, NULL);
+```
+
+This creates a thread that runs:
+
+```c
+void* worker1()
+{
+    printf("Thread1 worker\n");
+    sleep(2);
+    return NULL;
+}
+```
+
+Execution flow:
+1. Thread prints a message
+2. Sleeps for 2 seconds
+3. Returns, which terminates the thread
+
+# 2. Thread Function Signature
+
+All pthread thread functions must follow this format:
+
+```c
+void* function(void* arg)
+```
+
+Reason:
+- Allows passing any data type through a `void*`
+- Allows returning any pointer type
+
+Example:
+
+```c
+void* worker2(void* arg) {
+    char* str = (char*)arg;
+
+    while (1) {
+        printf("%s\n", str);
+        sleep(1);
+    }
+}
+```
+
+Here:
+- `arg` is passed as `void*`
+- It is cast to `char*`
+- The thread repeatedly prints the message
+
+# 3. Thread Termination
+
+A thread can terminate in several ways:
+
+1. Returning from the thread function
+```c
+return NULL;
+```
+2. Calling
+```c
+pthread_exit(NULL);
+```
+3. Being cancelled by another thread
+4. Process termination
+
+
+# 4. Joinable Threads
+
+By default, a thread is typically **joinable**, although POSIX recommends explicitly specifying this behavior because **different implementations may have different defaults**.
+
+A joinable thread:
+- Must be explicitly waited on
+- Keeps its resources allocated after finishing execution
+- Requires another thread to call `pthread_join()`
+
+### Joining a thread
+
+```c
+pthread_join(tid1, NULL);
+```
+
+This does two things:
+1. Blocks the calling thread until `tid1` finishes.
+2. Releases system resources used by the thread.
+
+### Example Flow
+
+```txt
+Main thread
+   |
+   |--- create tid1
+   |
+   |--- pthread_join(tid1)
+          (main thread waits here)
+   |
+   |--- continue execution
+```
+
+In the example program:
+
+```c
+pthread_create(&tid1, NULL, worker1, NULL);
+pthread_join(tid1, NULL);
+```
+
+The main thread blocks until `worker1` finishes.
+
+# 5. Zombie Threads
+
+If a joinable thread finishes execution but `pthread_join()` is never called, it becomes a zombie thread.
+
+A zombie thread:
+
+- Has finished execution
+- Still holds system resources
+- Remains until `pthread_join()` is called
+
+This is similar in concept to zombie processes.
+
+# 6. Detached Threads
+
+A detached thread automatically releases its resources when it finishes execution. No other thread needs to call `pthread_join()`. A thread can be made detached using:
+
+```c
+pthread_detach(thread_id);
+```
+
+Or via thread attributes during creation.
+
+# 7. Example from the Program
+
+After the first thread completes, the program creates a second thread:
+
+```c
+static char* string = "Thread2 worker";
+pthread_create(&tid2, NULL, worker2, (void*)string);
+```
+
+This thread:
+- Prints `"Thread2 worker"` every second
+- Runs an **infinite loop**
+
+Important point:
+
+```c
+pthread_join(tid2, NULL);
+```
+
+is **never called**.
+
+Therefore:
+- `tid2` remains **joinable**
+- If it terminates, it would become a **zombie thread**
+
+However, in this program:
+- The thread never exits because of the infinite loop.
+
+# 8. Resource Cleanup at Process Termination
+
+Even if a thread becomes a zombie, its resources are eventually reclaimed when the **process exits**.
+
+In this example:
+
+```c
+sleep(10);
+return 0;
+```
+
+After 10 seconds:
+
+- The **main thread exits**
+- The entire process terminates
+- All threads and resources are reclaimed by the OS.
+
+# 9. Program Execution Timeline
+
+Possible output sequence:
+
+```
+Thread1 worker
+Main thread
+Thread2 worker
+Thread2 worker
+Thread2 worker
+...
+```
+
+Execution order:
+
+1. `tid1` starts
+2. Main thread waits using `pthread_join`
+3. `worker1` completes
+4. `tid2` starts
+5. Main thread prints `"Main thread"`
+6. `worker2` runs repeatedly
+7. Process exits after 10 seconds
+
+
+# 10. Best Practice
+
+It is recommended to **explicitly define thread detach state** rather than relying on defaults.
+
+Two common patterns:
+
+### Joinable worker threads
+
+Use when the result or completion matters.
+
+```
+create → join
+```
+
+### Detached background threads
+
+Use when the thread is independent.
+
+```
+create → detach → forget
+```
