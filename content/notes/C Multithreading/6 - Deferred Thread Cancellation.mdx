@@ -4,7 +4,7 @@ title: 6 - Deferred Thread Cancellation
 
 # Program
 
-```
+```c
 #include <stdio.h>  
 #include <pthread.h>  
 #include <stdlib.h>  
@@ -231,14 +231,14 @@ Cleanup handlers behave like a **stack (LIFO)**.
 
 Push order:
 
-```
+```txt
 cleanup_thread_arg
 close_thread_file
 ```
 
 Execution order during cancellation:
 
-```
+```txt
 close_thread_file
 cleanup_thread_arg
 ```

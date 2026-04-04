@@ -1,0 +1,46 @@
+---
+title: 7 - Difference between Asynchronous and Deferred Thread Cancellation
+---
+
+# Question
+
+What are the differences between Asynchronous and Deferred Thread cancellation? Both have mechanisms to prevent resource leakage. The former is more likely to suffer from the problem of Invariants than the latter. In async mode, the thread can terminate at any point, but that can be controlled by disabling/enabling thread cancellation. Cleanup handlers work the same way for both of them as well.
+
+# Answer
+
+Both asynchronous and deferred cancellation have mechanisms to avoid leaks (cleanup handlers), but the real difference is about _when_ cancellation can occur and how predictable that moment is. That difference has major consequences for correctness.
+
+Here are the key differences that separate them in practice:
+
+## 1. The Trigger Point (Who is in control?)
+
+- Deferred (The Default): The thread is in control. It only checks for cancellation when it reaches a "safe harbor" (a cancellation point). This makes it much easier to reason about exactly where a thread might die.
+- Asynchronous: The OS/Kernel is in control. The moment another thread calls `pthread_cancel`, the target thread is nuked. It doesn't wait for a function call; it could happen between two assembly instructions (e.g., after loading a value into a register but before storing it back to memory).
+
+## 2. Async-Cancel Safety (The "Library Problem")
+
+This is the biggest practical hurdle for Asynchronous mode.
+
+- Deferred: Almost all standard library functions (like `printf`, `malloc`, or `fopen`) are safe to use because they aren't cancellation points, or if they are, they handle their own internal state.
+- Asynchronous: Most functions in `libc` are not async-cancel-safe. If a thread is cancelled while inside `malloc` holding an internal heap lock, that lock is never released. The entire process will deadlock the next time any other thread tries to allocate memory. In Async mode, you can effectively only call functions explicitly marked as async-cancel-safe (like `pthread_testcancel`).
+
+## 3. Handling Invariants
+
+- Deferred: You protect invariants by simply not calling cancellation points while the data is consistent. You avoid `sleep()`, `read()`, etc.
+- Asynchronous: To protect an invariant, you must explicitly call `pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, ...)`. If you forget this for even a single microsecond while updating a pointer, your data structure is corrupted.
+
+## 4. Cleanup Handler Execution
+
+- Deferred: Since cancellation only happens at known points, you know exactly which variables are in-scope and which cleanup handlers are relevant.
+- Asynchronous: Because a thread can be cancelled _inside_ the `pthread_cleanup_push` macro itself (before the handler is fully registered), it is notoriously difficult to guarantee that a cleanup handler will actually catch a resource allocated just a line prior.
+
+## Summary Comparison
+
+|Feature|Deferred Cancellation|Asynchronous Cancellation|
+|---|---|---|
+|Precision|Low (waits for a point)|High (happens "now")|
+|Logic Complexity|Easy (avoid points in critical sections)|Hard (must disable/enable constantly)|
+|Library Usage|Safe for most functions|Dangerous for most functions|
+|Best Use Case|Long-running loops, I/O tasks|Non-library "math-heavy" crunching|
+
+Asynchronous cancellation is rarely used in modern systems programming because the "safety tax" you pay (disabling/enabling constantly) usually negates the performance/latency benefit of immediate termination.
