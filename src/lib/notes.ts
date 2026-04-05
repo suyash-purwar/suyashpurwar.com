@@ -52,7 +52,7 @@ export function getNotesTree(
   const sorted = [...entries].sort((a, b) => {
     if (a.isDirectory() && !b.isDirectory()) return -1;
     if (!a.isDirectory() && b.isDirectory()) return 1;
-    return a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
   });
 
   for (const entry of sorted) {
