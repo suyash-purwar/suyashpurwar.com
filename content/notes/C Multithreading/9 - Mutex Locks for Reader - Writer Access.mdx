@@ -1,0 +1,330 @@
+---
+title: 9 - Mutex Locks for Reader - Writer Access
+---
+
+# Program
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+#include <stdlib.h>  
+#include <unistd.h>  
+  
+/**  
+ * There are two threads - Summation Thread and Swap Ends Thread.  
+ * Summation Thread is responsible for doing the summation of items present in the list.  
+ * Swap Ends Thread is responsible for swapping the first and last values of the list.  
+ *  
+ * Summation Thread is the reader of shared data while Swap Ends Thread is the writer. Without thread synchronization,  
+ * the sum would become corrupt. Swapping numbers in the array required three steps. Swap Ends can preempt after 2 steps  
+ * leading to incorrect list state. Summation Thread will read this incorrect state for summation and produce a wrong  
+ * number.  
+ *
+ * A Mutex Lock solves this problem. 
+ */  
+
+typedef struct {  
+    int list[5];  
+    pthread_mutex_t lock;  
+} SpecialArray;  
+  
+void* summation_worker(void* arg) {  
+    SpecialArray* sa = arg;  
+    short int i = 0;  
+  
+    while (i < 10000) {  
+        int sum = 0;  
+  
+        pthread_mutex_lock(&sa -> lock);  
+        for (int j = 0; j < 5; j++) {  
+            sum += sa -> list[j];  
+        }  
+        pthread_mutex_unlock(&sa -> lock);  
+  
+        if (sum != 150) {  
+            printf("%d ", sum);  
+        }  
+  
+        i++;  
+    }  
+  
+    return NULL;  
+}  
+  
+void* swap_ends_worker(void* arg) {  
+    SpecialArray* sa = arg;  
+    short int i = 0;  
+  
+    while (i < 10000) {  
+        pthread_mutex_lock(&sa -> lock);  
+        const int temp = sa -> list[0];  
+        sa -> list[0] = sa -> list[4];  
+        sa -> list[4] = temp;  
+        pthread_mutex_unlock(&sa -> lock);  
+  
+        i++;  
+    }  
+  
+    return NULL;  
+}  
+  
+int main() {  
+    SpecialArray sa = { {10, 20, 30, 40, 50}, PTHREAD_MUTEX_INITIALIZER };  
+  
+    pthread_t summation_thread;  
+    pthread_t swap_ends_thread;  
+    pthread_attr_t thread_attr;  
+  
+    pthread_attr_init(&thread_attr);  
+    pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_JOINABLE);  
+  
+    if (pthread_create(&swap_ends_thread, &thread_attr, swap_ends_worker, &sa)) {  
+        printf("Failed to create swap_ends thread");  
+        exit(-1);  
+    }  
+  
+    if (pthread_create(&summation_thread, &thread_attr, summation_worker, &sa)) {  
+        printf("Failed to create summation thread");  
+        exit(-1);  
+    }  
+  
+    if (pthread_join(swap_ends_thread, NULL)) {  
+        printf("Failed to join swap_ends thread");  
+        exit(-1);  
+    }  
+  
+    if (pthread_join(summation_thread, NULL)) {  
+        printf("Failed to join summation thread");  
+        exit(-1);  
+    }  
+  
+    return 0;  
+}
+```
+
+# 1. Problem Setup
+
+In this program, two threads operate on a shared data structure:
+
+```c
+typedef struct {
+    int list[5];
+    pthread_mutex_t lock;
+} SpecialArray;
+```
+
+The structure contains:
+
+- A shared array
+- A mutex lock protecting the array
+
+Initial state of the array:
+
+```txt
+[10, 20, 30, 40, 50]
+```
+
+The correct sum of the array is:
+
+```txt
+150
+```
+
+Two threads interact with this shared data.
+
+
+# 2. Roles of the Threads
+
+## Summation Thread (Reader)
+
+The Summation Thread repeatedly calculates the sum of the array.
+
+```c
+pthread_mutex_lock(&sa->lock);
+
+for (int j = 0; j < 5; j++) {
+    sum += sa->list[j];
+}
+
+pthread_mutex_unlock(&sa->lock);
+```
+
+Characteristics:
+
+- Reads shared data
+- Does not modify the array
+- Expects the array to remain consistent during reading
+
+If the computed sum is not `150`, the program prints it.
+
+## Swap Ends Thread (Writer)
+
+The Swap Ends Thread repeatedly swaps the first and last elements.
+
+```c
+pthread_mutex_lock(&sa->lock);
+
+const int temp = sa->list[0];
+sa->list[0] = sa->list[4];
+sa->list[4] = temp;
+
+pthread_mutex_unlock(&sa->lock);
+```
+
+Effect of swap:
+
+```txt
+Before: [10, 20, 30, 40, 50]
+After : [50, 20, 30, 40, 10]
+```
+
+The sum should still remain 150.
+
+
+# 3. The Race Condition Without Mutex
+
+Swapping the elements is not a single atomic operation.  
+It consists of multiple steps.
+
+```txt
+temp = list[0]
+list[0] = list[4]
+list[4] = temp
+```
+
+Possible interleaving:
+
+```txt
+Initial array: [10,20,30,40,50]
+
+Step 1: temp = list[0]  → temp = 10
+Step 2: list[0] = list[4] → list becomes [50,20,30,40,50]
+
+--- context switch happens here ---
+
+Summation thread reads:
+[50,20,30,40,50]
+```
+
+The sum becomes:
+
+```txt
+190
+```
+
+Which is **incorrect**.
+
+Afterwards:
+
+```
+list[4] = temp → list becomes [50,20,30,40,10]
+```
+
+The array becomes correct again, but the reader has already observed an inconsistent state.
+
+This is a classic race condition between a reader and a writer.
+
+# 4. Critical Section
+
+The critical section is the portion of code where shared data is accessed.
+
+In this program:
+
+### Reader Critical Section
+
+```c
+pthread_mutex_lock(&sa->lock);
+
+for (int j = 0; j < 5; j++) {
+    sum += sa->list[j];
+}
+
+pthread_mutex_unlock(&sa->lock);
+```
+
+### Writer Critical Section
+
+```c
+pthread_mutex_lock(&sa->lock);
+
+const int temp = sa->list[0];
+sa->list[0] = sa->list[4];
+sa->list[4] = temp;
+
+pthread_mutex_unlock(&sa->lock);
+```
+
+The mutex ensures:
+
+```txt
+Reader cannot run while writer is modifying
+Writer cannot run while reader is reading
+```
+
+
+# 5. How the Mutex Solves the Problem
+
+Mutex ensures **mutual exclusion**.
+
+Possible execution:
+
+```txt
+Swap thread acquires lock
+Performs swap
+Releases lock
+
+Summation thread acquires lock
+Reads consistent array
+Releases lock
+```
+
+Or:
+
+```
+Summation thread acquires lock
+Reads array
+Releases lock
+
+Swap thread acquires lock
+Performs swap
+Releases lock
+```
+
+In both cases:
+
+- The reader never observes a partially updated array.
+- The writer completes its modification atomically from the reader’s perspective.
+
+
+# 6. Object-Level Locking Example
+
+This program demonstrates **object-level locking**. The mutex is embedded inside the data structure:
+
+```c
+typedef struct {
+    int list[5];
+    pthread_mutex_t lock;
+} SpecialArray;
+```
+
+This means:
+
+Each `SpecialArray` object has its **own mutex**.
+
+If there were multiple arrays:
+
+```
+SpecialArray A
+SpecialArray B
+SpecialArray C
+```
+
+Threads working on different arrays would not block each other. This increases concurrency and scalability.
+
+# 7. Why the Reader Also Needs a Lock
+
+A common misconception is that only writers need synchronization. However, readers must also acquire the mutex because:
+
+- Writers may modify data while readers are reading.
+- Readers could observe intermediate states.
+
+The mutex therefore protects both read and write operations.

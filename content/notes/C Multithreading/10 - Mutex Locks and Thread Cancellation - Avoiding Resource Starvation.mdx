@@ -1,0 +1,362 @@
+---
+title: 10 - Mutex Locks and Thread Cancellation - Avoiding Resource Starvation
+---
+
+# Problematic Program
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+#include <math.h>  
+#include <unistd.h>  
+  
+/**  
+* Here, Thread 2 indefinitely starves for the resource. How?  
+*  
+*  - Thread 1 starts and takes the lock. Before it could finish, it gets cancelled.  
+*  - Thread 2 starts and tries to take the lock. But, the lock already has been acquired by another thread which  
+*    may or may not be active right now.  
+*  - In our case Thread 1 gets cancelled and the lock is never released for Thread 2 to complete it's work. Hence, it  
+*    stays blocked forever.  
+*  
+* This problem can be solved by clean up handler functions. Demonstrated in m11.c.
+*/
+   
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;  
+static int resource = 100;  
+  
+void* worker(void* arg) {  
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);  
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);  
+  
+    int thread_id = *(int*)arg;  
+  
+    printf("Thread %d worker triggered\n", thread_id);  
+  
+    pthread_mutex_lock(&lock);  
+  
+    printf("Thread %d mutex triggered\n", thread_id);  
+  
+    resource = resource + sin(resource);  
+  
+    sleep(1); // Cancel Point 1  
+  
+    pthread_testcancel(); // Cancel Point 2  
+  
+    pthread_mutex_unlock(&lock);  
+  
+    printf("Unlocked\n");  
+  
+    return NULL;  
+}  
+  
+int main() {  
+    pthread_t thread1;  
+    pthread_t thread2;  
+    int thread1_arg = 1;  
+    int thread2_arg = 2;  
+  
+    void* thread_1_retval;  
+    void* thread_2_retval;  
+  
+    pthread_create(&thread1, NULL, worker, &thread1_arg);  
+    pthread_create(&thread2, NULL, worker, &thread2_arg); // Gets deadlocked  
+  
+    pthread_cancel(thread1);  
+  
+    pthread_join(thread1, &thread_1_retval);  
+  
+    if (thread_1_retval == PTHREAD_CANCELED) {  
+        printf("Thread 1 is cancelled without releasing the lock\n");  
+    }  
+  
+    pthread_join(thread2, &thread_2_retval);  
+  
+    printf("Thread 2 is never joined as it starves for the mutex to unlock\n");  
+  
+    return 0;  
+}
+```
+
+# Fixed Program
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+#include <math.h>  
+#include <unistd.h>  
+  
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;  
+static int resource = 100;  
+  
+void release_lock() {  
+    pthread_mutex_unlock(&lock);  
+}  
+  
+void* worker(void* arg) {  
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);  
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);  
+  
+    int thread_id = *(int*)arg;  
+  
+    printf("Thread %d worker triggered\n", thread_id);  
+  
+    pthread_mutex_lock(&lock);  
+    pthread_cleanup_push(release_lock, NULL);  
+  
+    printf("Thread %d mutex triggered\n", thread_id);  
+  
+    resource = resource + sin(resource);  
+  
+    sleep(1); // Cancel Point 1  
+  
+    pthread_testcancel(); // Cancel Point 2  
+  
+    pthread_cleanup_pop(1);  
+  
+    printf("Unlocked\n");  
+  
+    return NULL;  
+}  
+  
+int main() {  
+    pthread_t thread1;  
+    pthread_t thread2;  
+    int thread1_arg = 1;  
+    int thread2_arg = 2;  
+  
+    void* thread_1_retval;  
+    void* thread_2_retval;  
+  
+    pthread_create(&thread1, NULL, worker, &thread1_arg);  
+    pthread_create(&thread2, NULL, worker, &thread2_arg);
+  
+    pthread_cancel(thread1);  
+  
+    pthread_join(thread1, &thread_1_retval);  
+  
+    if (thread_1_retval == PTHREAD_CANCELED) {  
+        printf("Thread 1 is cancelled without releasing the lock\n");  
+    }  
+  
+    pthread_join(thread2, &thread_2_retval);   
+  
+    return 0;  
+}
+```
+
+
+
+# 1. Problem Overview
+
+This example demonstrates a subtle concurrency issue:
+
+> A thread holding a mutex may get cancelled before releasing the lock.
+
+When this happens:
+- The mutex **remains locked forever**
+- Other threads waiting for the mutex **block indefinitely**
+
+This leads to thread starvation and effectively behaves like a deadlock.
+
+
+# 2. Shared Resource and Mutex
+
+The program contains a shared resource protected by a mutex.
+
+```c
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static int resource = 100;
+```
+
+The mutex ensures that only one thread at a time modifies the shared variable `resource`.    
+
+# 3. Worker Thread Behavior
+
+Each worker thread performs the following steps:
+
+1. Enable thread cancellation
+2. Acquire the mutex
+3. Modify the shared resource
+4. Reach a cancellation point
+5. Release the mutex
+
+Simplified flow:
+
+```txt
+Acquire mutex
+Modify resource
+Hit cancellation point
+Release mutex
+```
+
+
+# 4. Thread Cancellation Configuration
+
+Inside the worker:
+
+```c
+pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+```
+
+### Deferred Cancellation
+
+`PTHREAD_CANCEL_DEFERRED` means:
+- The thread is not cancelled immediately
+- Cancellation occurs only at cancellation points
+
+Examples of cancellation points:
+
+- `sleep()`
+- `pthread_testcancel()`
+- many blocking system calls
+
+In this program:
+
+```c
+sleep(1);            // Cancel point
+pthread_testcancel(); // Explicit cancel point
+```
+
+# 5. Scenario Leading to Starvation (Problematic Program)
+
+### Step-by-step execution
+
+1. Thread 1 starts
+
+```txt
+Thread 1 acquires mutex
+```
+
+2. Thread 2 starts
+
+```txt
+Thread 2 tries to acquire mutex
+→ blocked
+```
+
+3. Main thread cancels Thread 1
+
+```c
+pthread_cancel(thread1);
+```
+
+4. Thread 1 reaches a cancellation point:
+
+```c
+sleep(1)
+```
+
+Thread 1 is terminated immediately.
+
+However, Thread 1 never executes `pthread_mutex_unlock()`.
+
+Therefore, the mutex remains locked forever
+
+5. Thread 2 continues waiting
+
+```
+pthread_mutex_lock(&lock)
+```
+
+But the mutex owner **no longer exists**. This results in Thread 2 being blocked forever.
+
+The main thread also blocks at:
+
+```c
+pthread_join(thread2)
+```
+
+Thus the program hangs indefinitely.
+
+# 6. Root Cause
+
+The root problem is:
+
+> **Cancellation interrupts a thread while it holds a critical resource.**
+
+If the thread exits before releasing the resource, the program enters an inconsistent state. This is dangerous for resources like:
+
+- Mutex locks
+- File descriptors
+- Memory allocations
+- Database connections
+
+# 7. Solution: Cleanup Handlers
+
+POSIX threads provide cleanup handlers to handle such situations. Cleanup handlers ensure that certain code runs automatically when a thread is cancelled. This is similar to:
+
+- `finally` blocks in Java
+- `defer` in Go
+- RAII destructors in C++
+
+# 8. Registering a Cleanup Handler
+
+In the corrected program, a cleanup handler is registered.
+
+```c
+void release_lock() {
+    pthread_mutex_unlock(&lock);
+}
+```
+
+The handler is registered using:
+
+```c
+pthread_cleanup_push(release_lock, NULL);
+```
+
+This tells the system, if this thread exits or is cancelled, run release_lock()
+
+# 9. Corrected Worker Flow
+
+The corrected worker logic:
+
+```text
+Acquire mutex
+Register cleanup handler
+Perform work
+Reach cancellation point
+Cleanup handler unlocks mutex
+Thread exits
+```
+
+Code structure:
+
+```c
+pthread_mutex_lock(&lock);
+
+pthread_cleanup_push(release_lock, NULL);
+
+resource = resource + sin(resource);
+
+sleep(1);
+pthread_testcancel();
+
+pthread_cleanup_pop(1);
+```
+
+
+# 10. What Happens During Cancellation Now
+
+With cleanup handlers:
+
+```txt
+Thread 1 acquires mutex
+Thread 1 registers cleanup handler
+Thread 1 reaches cancel point
+Thread 1 gets cancelled
+Cleanup handler executes
+Mutex unlocked
+Thread 2 acquires mutex
+Program continues normally
+```
+
+No starvation occurs.
+
+# Main Point
+
+This example highlights an important systems programming principle:
+
+> **Every resource acquisition must have a guaranteed release path.**
+
+If cancellation, signals, or errors interrupt execution, cleanup handlers ensure the program remains in a consistent state.

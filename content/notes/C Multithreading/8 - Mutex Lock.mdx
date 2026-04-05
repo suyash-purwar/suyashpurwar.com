@@ -1,0 +1,395 @@
+---
+title: 8 - Mutex Lock
+---
+
+# Program Example
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+#include <stdlib.h>  
+  
+#define THREADS 4  
+#define COUNT_LIMIT 1e7  
+  
+/**
+ * Without Thread Synchronization, the critical section (`count++`) would be accessible by all the threads leading to  
+ * Dirty Writes problem.  
+ *  
+ * Mutex stands for Mutual Exclusion. It ensures that at any point of time only thread is able to access the critical  
+ * section of the thread. It does so by acquiring locks. In a case where thread T1 has acquired the lock and the thread  
+ * T2 tries to acquire the lock, thread T2 gets blocked and waits for Thread T1 to release it.  
+ *  
+ * In this particular example, the thread workload is purely CPU bound. In a scenario such as this, concurrency is  
+ * helpful only when the system has multiple cores. Had there been a single core, concurrency would only make the  
+ * performance poorer.  
+ *  
+ * A mutex lock can be initialised in two ways:  
+ *  - `pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER`  
+ *  - `pthread_mutex_initializer(pthread_mutex_t*, const pthread_mutexattr_t*)`  
+ *  
+ * A mutex is taken and release via these two functions  
+ *  - `pthread_mutex_lock(pthread_mutex_t*)`  
+ *  - `pthread_mutex_unlock(pthread_mutex_t*)`  
+ *  
+ * A mutex is deleted by `pthread_mutex_destroy(pthread_mutex_t*)` function  
+ *  
+ * Some points on Mutex:  
+ *  - If T1 locks a mutex M, only T1 can unlock it.  
+ *  - T1 cannot unlock an already unlocked mutex. If done, it leads to undefined behaviour.  
+ *  - If T1 locks a mutex M; T1, T2 will be locked if they try to lock M.  
+ *  - If T2 and T3 are blocked to acquire a lock on already blocked mutex M, the OS scheduling policy will decide  
+ *    which thread (T2 or T3) would acquire the lock on M, when M is unlocked by  its owner (T1).  
+ *  - If thread T1 attempts to double lock the mutex M, it will self-deadlock.  
+ *  - Mutexes must be unlocked in LIFO order.  
+ *  
+ * There are two types of Mutex strategies:  
+ *  - Object-Level Locking: Only one thread can execute a synchronized block or method on a particular instance of an  
+ *    object at any given time. If you have two different objects (instances) of the same class, two threads can execute  
+ *    the same code simultaneously, one for each object without blocking each other.  
+ *  - Code-Level Locking (Class-Level Locking): This mechanism is used to synchronize access across all instances of a  
+ *    class or a specific block of code regardless of which object is being used. If there is a global resource shared  
+ *    across all the threads, this method of mutex is used.
+ */  
+  
+static volatile int count = 0;  
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;  
+  
+void* counter() {  
+    for (int i = 0; i < COUNT_LIMIT; i++) {  
+        pthread_mutex_lock(&lock);  
+        count++;  
+        pthread_mutex_unlock(&lock);  
+    }  
+  
+    return NULL;  
+}  
+  
+pthread_t* create_counter_thread() {  
+    pthread_t* thread = calloc(1, sizeof(pthread_t));  
+    pthread_attr_t thread_attr;  
+  
+    pthread_attr_init(&thread_attr);  
+    pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_JOINABLE);  
+  
+    const int thread_status = pthread_create(thread, &thread_attr, counter, NULL);  
+  
+    if (thread_status) {  
+        printf("Failed to create thread");  
+        return NULL;  
+    }  
+  
+    return thread;  
+}  
+  
+int main() {  
+    pthread_t* threads[THREADS];  
+  
+    for (int i = 0; i < THREADS; i++) {  
+        threads[i] = create_counter_thread();  
+    }  
+  
+    for (int i = 0; i < THREADS; i++) {  
+        pthread_join(*threads[i], NULL);  
+        free(threads[i]);  
+    }  
+  
+    printf("Counter is: %d\n", count);  
+  
+    pthread_mutex_destroy(&lock);  
+}
+```
+
+
+# 1. Why Mutex Locks Are Needed
+
+When multiple threads access a shared resource, there is a risk of race conditions.
+
+In the program:
+
+```c
+count++;
+```
+
+This statement is inside a loop executed by multiple threads. Although it looks like a single operation, it actually involves multiple CPU steps:
+
+1. Load `count` from memory
+2. Increment it
+3. Store the updated value back
+
+If two threads execute this simultaneously, the following may happen:
+
+```txt
+Thread 1 reads count = 5
+Thread 2 reads count = 5
+Thread 1 writes 6
+Thread 2 writes 6
+```
+
+The expected value should have been **7**, but we end up with **6**.
+
+This problem is called **Dirty Writes / Race Condition**.
+
+The section of code that accesses shared data is called the **Critical Section**.
+
+
+
+# 2. What is a Mutex?
+
+Mutex stands for Mutual Exclusion.
+
+A mutex ensures that only one thread at a time can execute a critical section.
+
+The idea is simple:
+
+1. A thread acquires the lock
+2. Executes the critical section
+3. Releases the lock
+
+If another thread tries to acquire the lock while it is already held, the thread blocks and waits until the mutex is released.
+
+Example flow:
+
+```txt
+Thread T1 acquires lock
+Thread T2 tries to acquire lock → blocked
+Thread T1 releases lock
+Thread T2 acquires lock
+```
+
+
+# 3. Mutex Initialization
+
+A mutex can be initialized in two ways.
+
+### Static Initialization
+
+```c
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+```
+
+This is commonly used for global or static mutexes.
+
+### Dynamic Initialization
+
+```c
+pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr);
+```
+
+Used when:
+
+- The mutex is dynamically allocated
+- Custom attributes are needed
+
+
+# 4. Locking and Unlocking a Mutex
+
+Mutex operations are performed using two functions.
+
+### Lock
+
+```c
+pthread_mutex_lock(pthread_mutex_t *mutex);
+```
+
+Behavior:
+
+- If mutex is unlocked → thread acquires it
+- If mutex is locked → thread blocks
+
+### Unlock
+
+```c
+pthread_mutex_unlock(pthread_mutex_t *mutex);
+```
+
+This releases the mutex so another thread can acquire it.
+
+
+# 5. Destroying a Mutex
+
+When the mutex is no longer needed:
+
+```c
+pthread_mutex_destroy(pthread_mutex_t *mutex);
+```
+
+This frees resources associated with the mutex.
+
+In the example:
+
+```c
+pthread_mutex_destroy(&lock);
+```
+
+This is done after all threads have completed.
+
+
+# 6. Using Mutex in the Example Program
+
+The program launches 4 threads, each incrementing the shared counter.
+
+### Shared Data
+
+```c
+static volatile int count = 0;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+```
+
+- `count` is the shared variable
+- `lock` protects access to it
+
+### Critical Section
+
+```c
+pthread_mutex_lock(&lock);
+count++;
+pthread_mutex_unlock(&lock);
+```
+
+Only one thread at a time can modify `count`.
+
+Without this lock, the result would be incorrect due to race conditions.
+
+
+# 7. Thread Workload Characteristics
+
+In this program:
+
+```
+COUNT_LIMIT = 1e7
+```
+
+Each thread performs 10 million increments.
+
+This is a **CPU-bound workload**, meaning:
+
+- The task mostly uses CP
+- There is no waiting on I/O
+
+### Performance Implication
+
+CPU Concurrency helps only if the system has multiple CPU cores.
+
+If the machine has only one core:
+
+- Threads compete for CPU time
+- Context switching overhead increases
+- Performance may actually become worse
+
+
+# 8. Important Rules About Mutexes
+
+### 1. Only the Owner Can Unlock
+
+If Thread T1 locks mutex M, only T1 can unlock it.
+
+### 2. Unlocking an Unlocked Mutex
+
+Attempting to unlock an already unlocked mutex leads to undefined behavior.
+
+### 3. Lock Contention
+
+If a mutex is locked:
+- Threads trying to acquire it will block
+
+Example:
+
+```txt
+T1 holds lock
+T2 tries to lock → blocked
+T3 tries to lock → blocked
+```
+
+### 4. Lock Acquisition Order
+
+If multiple threads are waiting:
+
+```txt
+T1 holds lock
+T2 and T3 waiting
+```
+
+When T1 releases the lock:
+- The OS scheduler decides which thread gets the mutex.
+
+This is not deterministic.
+
+### 5. Double Locking Causes Self-Deadlock
+
+If a thread attempts to lock the same mutex twice:
+
+```txt
+T1 locks M
+T1 tries to lock M again
+```
+
+The thread blocks waiting for itself, resulting in a deadlock.
+
+This is called **self-deadlock**.
+
+### 6. Mutex Unlock Order
+
+If multiple mutexes are acquired:
+
+```txt
+lock(A)
+lock(B)
+```
+
+They should be released in reverse order (LIFO):
+
+```txt
+unlock(B)
+unlock(A)
+```
+
+This helps prevent deadlocks.
+
+
+# 9. Mutex Locking Strategies
+
+There are two common ways mutexes are applied in programs.
+
+
+## Object-Level Locking
+
+Each object instance has its own mutex.
+
+Example concept:
+
+```txt
+Object A → Mutex A
+Object B → Mutex B
+```
+
+Threads operating on different objects do not block each other.
+
+Benefits:
+
+- Higher concurrency
+- Less contention
+
+
+## Code-Level (Class-Level) Locking
+
+A single mutex protects a shared resource or code section.
+
+Example:
+
+```txt
+Global database connection
+Global cache
+Shared counter
+```
+
+All threads must acquire the same mutex.
+
+Effect:
+
+```txt
+Thread T1 executing critical code
+Thread T2 blocked
+Thread T3 blocked
+```
+
+This approach is used when the resource is globally shared.

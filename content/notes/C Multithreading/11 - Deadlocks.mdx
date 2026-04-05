@@ -1,0 +1,341 @@
+---
+title: 11 - Deadlocks
+---
+
+# Program 1 - Circular Deadlock
+
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+#include <unistd.h>  
+  
+/**  
+* This is a classic example of Deadlock. A deadlock in an operating system is a state where a set of threads are  
+* stuck permanently because each is waiting for a resource held by another, creating a circular dependency.  
+*  
+* Four Necessary Conditions :  
+*  1. Mutual Exclusion: One or more than one resource are non-shareable (Only one thread can use at a time)  
+*  2. Hold and Wait: A thread is holding at least one resource and waiting for other resources.  
+*  3. No Preemption: A resource cannot be taken from a thread unless the thread releases the resource.  
+*  4. Circular Wait: A set of threads are waiting for each other in circular form.
+*/  
+typedef struct {  
+    int id;  
+    pthread_mutex_t lock;  
+} Resource;  
+  
+Resource r1 = { 1, PTHREAD_MUTEX_INITIALIZER };  
+Resource r2 = { 2, PTHREAD_MUTEX_INITIALIZER };  
+  
+void* t1_worker(void* arg) {  
+    printf("Thread 1: Start\n");  
+  
+    pthread_mutex_lock(&r1.lock);  
+  
+    printf("Thread 1: Lock acquired on Resource 1\n");  
+    sleep(1);  
+  
+    pthread_mutex_lock(&r2.lock);  
+  
+    printf("Thread 1: Lock acquired on Resource 2\n");  
+  
+    pthread_mutex_unlock(&r2.lock);  
+  
+    printf("Thread 1: Lock released on Resource 2\n");  
+  
+    pthread_mutex_unlock(&r1.lock);  
+  
+    printf("Thread 1: Lock released on Resource 1\n");  
+  
+    printf("Exit\n");  
+  
+    return NULL;  
+}  
+  
+void* t2_worker(void* arg) {  
+    printf("Thread 2: Start\n");  
+  
+    pthread_mutex_lock(&r2.lock);  
+  
+    sleep(1);  
+  
+    printf("Thread 2: Lock acquired on Resource 2\n");  
+  
+    pthread_mutex_lock(&r1.lock);  
+  
+    printf("Thread 2: Lock acquired on Resource 1\n");  
+  
+    pthread_mutex_unlock(&r1.lock);  
+  
+    printf("Thread 2: Lock released on Resource 1\n");  
+  
+    pthread_mutex_unlock(&r2.lock);  
+  
+    printf("Thread 2: Lock released on Resource 2\n");  
+  
+    printf("Exit\n");  
+  
+    return NULL;  
+}  
+  
+int main() {  
+    pthread_t t1, t2;  
+    pthread_attr_t t_attr;  
+    int t1_arg = 1, t2_arg = 2;  
+  
+    pthread_attr_init(&t_attr);  
+    pthread_attr_setdetachstate(&t_attr, PTHREAD_CREATE_JOINABLE);  
+  
+    if (pthread_create(&t1, &t_attr, t1_worker, &t1_arg)) {  
+        printf("Failed to create thread 1");  
+    }  
+  
+    if (pthread_create(&t2, &t_attr, t2_worker, &t2_arg)) {  
+        printf("Failed to create thread 2");  
+    }  
+  
+    if (pthread_join(t1, NULL)) {  
+        printf("Failed to join thread 1");  
+    }  
+  
+    if (pthread_join(t2, NULL)) {  
+        printf("Failed to join thread 2");  
+    }  
+  
+    return 0;  
+}
+```
+
+# Program 2 - Self Deadlock
+
+```c
+#include <stdio.h>  
+#include <pthread.h>  
+ 
+static int resource = 10;  
+pthread_mutex_t lock;  
+  
+void* worker() {  
+    pthread_mutex_lock(&lock);  
+    printf("First lock acquired\n");  
+    pthread_mutex_lock(&lock);  
+    printf("Never executed because of deadlock");  
+  
+    resource = resource * 10;  
+  
+    pthread_mutex_unlock(&lock);  
+}  
+  
+int main() {  
+    pthread_t thread1;  
+    pthread_mutex_init(&lock, NULL);  
+  
+    pthread_create(&thread1, NULL, worker, NULL);  
+  
+    pthread_join(thread1, NULL);  
+  
+    printf("Resource: %d\n", resource);  
+}
+```
+
+
+# 1. What is a Deadlock?
+
+A deadlock is a situation where a group of threads become permanently blocked because each thread is waiting for a resource that another thread in the group holds.
+
+In such a situation:
+- None of the threads can proceed
+- The program stops making progress
+- The threads remain blocked forever
+
+Conceptually:
+
+```txt
+Thread A waits for Resource B
+Thread B waits for Resource A
+```
+
+Neither thread can proceed because the required resource is held by the other thread.
+
+# 2. Example: Circular Deadlock
+
+Consider the following shared resources:
+
+```c
+typedef struct {
+    int id;
+    pthread_mutex_t lock;
+} Resource;
+
+Resource r1;
+Resource r2;
+```
+
+Two threads attempt to lock these resources.
+
+### Thread 1
+
+```txt
+Lock Resource 1
+Wait
+Lock Resource 2
+```
+
+### Thread 2
+
+```txt
+Lock Resource 2
+Wait
+Lock Resource 1
+```
+
+
+## Execution Sequence
+
+A possible execution order:
+
+```txt
+Thread 1 locks Resource 1
+Thread 2 locks Resource 2
+
+Thread 1 tries to lock Resource 2 → blocked
+Thread 2 tries to lock Resource 1 → blocked
+```
+
+Now:
+
+```txt
+Thread 1 waits for Thread 2
+Thread 2 waits for Thread 1
+```
+
+This forms a circular dependency and leads to Deadlock. Neither thread can continue.
+
+
+# 3. Four Necessary Conditions for Deadlock
+
+Deadlocks occur only when all four of the following conditions are true simultaneously.
+
+## 1. Mutual Exclusion
+
+At least one resource must be non-shareable.
+
+Example:
+
+```txt
+Mutex lock
+Printer
+File handle
+```
+
+Only one thread can use the resource at a time. Mutexes inherently satisfy this condition.
+
+## 2. Hold and Wait
+
+A thread holds one resource while waiting for another. The thread does not release the first resource while waiting.
+
+Example:
+
+```txt
+Thread holds Resource 1
+Thread waits for Resource 2
+```
+
+## 3. No Preemption
+
+Resources cannot be forcibly taken away. A resource can only be released voluntarily by the thread holding it. The OS cannot simply take the mutex away.
+
+For mutexes, `pthread_mutex_unlock()` must be called by the owning thread.
+
+## 4. Circular Wait
+
+A circular chain of dependencies exists.
+
+Example:
+
+```text
+T1 → waits for resource held by T2
+T2 → waits for resource held by T3
+T3 → waits for resource held by T1
+```
+
+This creates a cycle in the resource dependency graph.
+
+# 4. Visual Representation of Deadlock
+
+Example dependency graph:
+
+```text
+Thread 1 ---- waits for ----> Resource 2
+Resource 1 <--- held by ---- Thread 1
+
+Thread 2 ---- waits for ----> Resource 1
+Resource 2 <--- held by ---- Thread 2
+```
+
+Circular dependency:
+
+```text
+T1 → R2 → T2 → R1 → T1
+```
+
+# 5. Example: Self Deadlock
+
+The second program demonstrates self-deadlock.
+
+### Code Pattern
+
+```c
+pthread_mutex_lock(&lock);
+printf("First lock acquired\n");
+
+pthread_mutex_lock(&lock);
+```
+
+Here:
+
+- A thread locks the mutex
+- Then tries to lock the same mutex again which leads to thread being blocked forever.
+
+# 7. Common Causes of Deadlocks
+
+Deadlocks usually arise from poor resource management patterns.
+
+Typical causes include:
+
+### 1. Inconsistent Lock Ordering
+
+Example:
+
+```txt
+Thread 1 locks A then B
+Thread 2 locks B then A
+```
+
+This is the most common cause of deadlocks. It is demonstrated in the first example.
+
+### 2. Nested Locks
+
+Acquiring multiple locks without a consistent ordering strategy.
+
+Example:
+
+```text
+lock(A)
+lock(B)
+lock(C)
+```
+
+### 3. Forgotten Unlocks
+
+A thread exits without releasing a lock.
+
+Example cases:
+
+- thread cancellation
+- exceptions
+- early returns
+
+### 4. Self Deadlock
+
+A thread attempts to lock the same mutex twice.
