@@ -12,7 +12,14 @@ title: 6 - Deferred Thread Cancellation
 #include <unistd.h>  
   
 /**  
- * Following is same as the last example as before but thread cancellation is performed in a Deferred Way. This way, we * can define points in the code where any pending thread cancellation request is checked for. * * It is there, the cleanup handlers are invoked and the cancellation sequence starts. We define these check points * using the `pthread_testcancel()` function. There are other cancellation points other than this, like `sleep()`, * `read()`, `write()`, etc. */  
+* Following is same as the last example as before but thread cancellation is performed in a Deferred Way. This way, we  
+* can define points in the code where any pending thread cancellation request is checked for.  
+*  
+* It is there, the cleanup handlers are invoked and the cancellation sequence starts. We define these check points  
+* using the `pthread_testcancel()` function. There are other cancellation points other than this, like `sleep()`,  
+* `read()`, `write()`, etc.
+*/
+
 #define WORKER_THREADS 5  
   
 pthread_t threads[WORKER_THREADS];  
