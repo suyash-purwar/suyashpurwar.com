@@ -27,7 +27,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       />
     ),
     p: (props) => (
-      <p className="mb-2" {...props} />
+      <p className="mb-2 leading-snug" {...props} />
     ),
     a: (props) => (
       <a
@@ -60,6 +60,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ),
     td: (props) => (
       <td className="border-b border-[var(--quaternary-color)] px-4 py-2" {...props} />
+    ),
+    blockquote: (props) => (
+      <blockquote className="my-4 border-l-4 border-l-[var(--quaternary-color)] pl-4" {...props} />
     ),
     ...components,
   }

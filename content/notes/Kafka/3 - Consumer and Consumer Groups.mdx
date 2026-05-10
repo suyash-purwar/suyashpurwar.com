@@ -1,0 +1,658 @@
+---
+title: 3 - Consumer and Consumer Groups
+---
+
+import Mermaid from '@/components/base/Mermaid'
+
+A **Consumer** reads events from Kafka topics. A **Consumer Group** is a collection of consumers working together to consume data from a topic.
+
+For example, we can have multiple consumer groups like:
+
+* `notification` group
+* `analytics` group
+
+Different applications can create their own consumer groups depending on their use case.
+
+A notification service may process events to send emails or push notifications, while an analytics service may process the same events for reporting and dashboards.
+
+Inside a single consumer group:
+
+> Two consumers cannot read the same partition simultaneously.
+
+But:
+
+> Consumers belonging to different groups can read the same partition.
+
+This is one of the most fundamental ideas in Kafka.
+
+
+## Example
+
+Imagine a topic with 3 partitions:
+
+```text
+Partition 0
+Partition 1
+Partition 2
+```
+
+Now suppose there are two consumer groups:
+
+* Notification Group
+* Analytics Group
+
+Both groups can independently read the same partitions.
+
+<Mermaid chart={`
+flowchart LR
+    Producer1["Producer1"]
+
+    subgraph KafkaBroker["Kafka Broker"]
+        subgraph Topic["Topic name = order-events"]
+            P0["P0"]
+            P1["P1"]
+            P2["P2"]
+        end
+    end
+
+    subgraph ConsumerGroup1["Consumer Group1 = notification"]
+        CG1C1["Consumer 1"]
+        CG1CN["Consumer N"]
+    end
+
+    subgraph ConsumerGroup2["Consumer Group2 = analytics"]
+        CG2C1["Consumer 1"]
+        CG2CN["Consumer N"]
+    end
+
+    Producer1 --> Topic
+
+    P0 --> CG1C1
+    P1 --> CG1CN
+
+    P1 --> CG2C1
+    P2 --> CG2CN
+`}/>
+
+This works because each group maintains its own reading progress independently.
+
+
+# Partition Assignment Rules
+
+## Consumers Equal to Partitions
+
+If there are 3 partitions and 3 consumers:
+
+```text
+Consumer 1 -> Partition 0
+Consumer 2 -> Partition 1
+Consumer 3 -> Partition 2
+```
+
+Perfect distribution.
+
+
+## Consumers Less Than Partitions
+
+A single consumer can handle multiple partitions.
+
+```text
+Consumer 1 -> Partition 0, Partition 1
+Consumer 2 -> Partition 2
+```
+
+Kafka distributes the work as evenly as possible.
+
+
+## Consumers Greater Than Partitions
+
+Some consumers remain idle.
+
+```text
+3 Partitions
+5 Consumers
+```
+
+Only 3 consumers will actively consume data.
+
+The remaining 2 consumers wait idle unless rebalancing happens later.
+
+
+# Offsets
+
+Each message inside a partition has an **offset**.
+
+An offset is simply a sequential number representing the position of a message inside a partition.
+
+Example:
+
+```text
+Partition 0
+
+Offset 0
+Offset 1
+Offset 2
+...
+Offset 500
+```
+
+If a consumer says:
+
+> “I have processed till offset 500”
+
+It means:
+
+* Messages from `0 → 500` are completed
+* Next read should start from `501`
+
+
+# Consumer Groups Maintain Offsets Independently
+
+Kafka stores offsets **group-wise**, not consumer-wise. Each consumer group maintains partition wise offset independently.
+
+For example,
+
+| Consumer Group  | Topic           | Partition | Committed Offset (processed upto this offset) |
+| --------------- | --------------- | --------- | ---------------- |
+| notification    | order-events    | 0         | 510              |
+| notification    | order-events    | 1         | 342              |
+| analytics       | order-events    | 0         | 825              |
+| analytics       | order-events    | 1         | 690              |
+
+## Why Group-Wise Instead of Consumer-Wise?
+
+Suppose:
+
+```text
+Notification Group
+    Consumer 1 -> Partition 0
+```
+
+Consumer 1 processes messages till offset `500`. Now Consumer 1 crashes. Kafka may assign Partition 0 to Consumer 2. Consumer 2 should continue from offset `501`.
+
+To make this possible, Kafka stores progress like this:
+
+```text
+Group: notification
+Topic: order-events
+Partition: 0
+Committed Offset: 500
+```
+
+Notice:
+
+* Kafka does NOT care which consumer processed it
+* Kafka only tracks the group’s progress
+
+This allows seamless failover.
+
+
+# Where Are Offsets Stored?
+
+Kafka stores offsets inside an **internal Kafka topic** called:
+
+```text
+__consumer_offsets
+```
+
+Kafka itself creates this topic automatically. So offset information is not stored in some special database.
+Kafka uses its own core mechanism:
+
+* Topics
+* Partitions
+* Logs
+
+Even Kafka's internal metadata relies on partitions.
+
+# How Offset Storage Works
+
+Suppose:
+
+* Topic = `order-events`
+* Consumer Group = `notification`
+* Partition = `0`
+* Processed till offset = `500`
+
+The consumer publishes a message into `__consumer_offsets`.
+
+That message contains:
+
+```text
+Group ID
+Topic
+Partition
+Committed Offset
+```
+
+Conceptually:
+
+<Mermaid chart={`
+flowchart LR
+    C[Consumer]
+    O[__consumer_offsets Topic]
+
+    C -->|Commit Offset 500| O
+`}/>
+
+
+# How Kafka Chooses the Offset Partition
+
+The `__consumer_offsets` topic has many partitions.
+
+Kafka computes the partition by:
+
+```text
+hash(groupId) % number_of_partitions
+```
+
+Example:
+
+```text
+partition_number = hash("notification_group_id") % 50 = 23
+```
+
+So all offset data for the `notification_group_id` goes into Partition 23 of `__consumer_offsets`.
+
+# Why This Partition Calculation Matters
+
+In a real Kafka cluster:
+
+* Different brokers host different partitions of topics
+* No broker stores everything
+
+So Kafka must determine:
+
+1. Which partition should store this offset
+2. Which broker hosts that partition
+
+Example:
+
+```text
+Broker 1 -> Partitions 1-20
+Broker 2 -> Partitions 21-50
+```
+
+If offsets map to Partition 23:
+
+* Kafka knows Broker 2 hosts it
+* Consumer communicates with Broker 2
+
+This is why partition calculation matters.
+
+
+# Consumer Recovery After Crash
+
+Suppose Consumer 1 crashes. Consumer 2 takes over. What happens?
+
+Consumer 2:
+
+1. Computes offset partition
+2. Finds the broker hosting that partition
+3. Reads committed offsets
+4. Resumes from the next offset
+
+Example:
+
+```text
+Last committed offset = 500
+Resume from = 501
+```
+
+This mechanism allows Kafka consumers to recover without losing their place.
+
+
+# Offset Commit Strategies
+
+Kafka provides different strategies for committing offsets.
+
+
+# Auto Commit
+
+Kafka can automatically commit offsets periodically.
+
+Example:
+
+```text
+auto.commit.interval.ms = 5000
+```
+
+It means every 5 seconds Kafka commits processed offsets automatically.
+
+
+## Problem with Auto Commit
+
+Suppose:
+
+```text
+Consumer polled messages 0-99
+```
+
+Auto commit occurs.
+
+Kafka records:
+
+```text
+Offset 99 processed
+```
+
+But the consumer crashes while processing message `50`.
+
+After restart:
+
+* Kafka thinks `99` was already processed
+* Consumer resumes from `100`
+
+Messages `51-99` are lost.
+
+This is dangerous.
+
+
+# Manual Commit
+
+The safer approach is manual commit.
+
+The consumer:
+
+1. Polls a batch
+2. Processes the batch
+3. Commits offsets only after successful processing
+
+Example:
+
+```text
+Poll -> Process -> Commit
+```
+
+If crash occurs before commit:
+
+* Kafka reprocesses messages
+* Duplicate processing may happen
+* But messages are not lost
+
+Kafka usually prefers:
+
+> Duplicate processing over data loss.
+
+
+# Why Not Commit After Every Message?
+
+Technically possible, but inefficient. Kafka is designed for high throughput.
+
+Committing after every event means:
+
+* Constant network calls
+* Reduced performance
+* Higher overhead
+
+Instead, applications choose a reasonable batch size. This becomes a tradeoff between:
+
+* Performance
+* Duplicate processing risk
+
+
+# Kafka Cluster
+
+A **Kafka Cluster** is simply:
+
+> Multiple brokers working together.
+
+Goals of clustering:
+
+* Scalability
+* Fault tolerance
+* High availability
+
+<Mermaid chart={`
+flowchart LR
+    Producer1["Producer1"]
+ 
+    subgraph KC["Kafka Cluster"]
+        subgraph KB1["Kafka Broker-1"]
+            subgraph OE["Topic name = order-events"]
+                P0_oe["P0"]
+                P1_oe["P1"]
+                P2_oe["P2"]
+            end
+            subgraph PE["Topic name = product-events"]
+                P0_pe["P0"]
+                P1_pe["P1"]
+            end
+        end
+ 
+        KB2["Kafka Broker-2"]
+        KB3["Kafka Broker-3"]
+    end
+ 
+    subgraph CG1["Consumer Group1 = notification"]
+        C1_notif["Consumer 1"]
+        CN_notif["Consumer N"]
+    end
+ 
+    subgraph CG2["Consumer Group2 = analytics"]
+        C1_analytics["Consumer 1"]
+        CN_analytics["Consumer N"]
+    end
+ 
+    Producer1 --> KB1
+    CG1 --> KB1
+    CG2 --> KB2
+`}/>
+
+
+# Scalability
+
+Load is distributed across multiple servers.
+
+Instead of one machine handling everything:
+
+```text
+Broker 1 -> Some partitions
+Broker 2 -> Some partitions
+Broker 3 -> Some partitions
+```
+
+Work is shared.
+
+
+# Fault Tolerance
+
+Kafka continues operating even if brokers fail.
+
+This is achieved using **replication**.
+
+
+# High Availability
+
+Kafka avoids a single point of failure.
+
+Even if:
+
+* A broker crashes
+* A partition replica fails
+
+Kafka can continue serving requests.
+
+
+# Leader and Follower Partitions
+
+Each partition has:
+
+* One **Leader**
+* One or more **Followers**
+
+Example:
+
+```text
+Replication Factor = 2
+```
+
+Means:
+
+* 1 Leader
+* 1 Follower copy
+
+
+# Example Cluster
+
+Topic:
+
+```text
+order-events
+```
+
+Partitions:
+
+```text
+P0
+P1
+P2
+```
+
+Replication Factor:
+
+```text
+2
+```
+
+Total replicas:
+
+```text
+6 replicas
+```
+
+* 3 leaders
+* 3 followers
+
+Distributed across brokers.
+
+
+# Leader-Follower Architecture
+
+<Mermaid chart={`
+flowchart TB
+    Producer1["Producer1"]
+
+    subgraph KC["Kafka Cluster"]
+        subgraph KB1["Kafka Broker-1"]
+            subgraph OE1["Topic name = order-events"]
+                P0_L["P0 : Leader"]
+                P1_F["P1 : Follower"]
+            end
+        end
+
+        subgraph KB2["Kafka Broker-2"]
+            subgraph OE2["Topic name = order-events"]
+                P1_L["P1 : Leader"]
+                P2_F["P2 : Follower"]
+            end
+        end
+
+        subgraph KB3["Kafka Broker-3"]
+            subgraph OE3["Topic name = order-events"]
+                P0_f["P0 : Follower"]
+                P2_L["P2 : Leader"]
+            end
+        end
+    end
+
+    subgraph CG1["Consumer Group1 = notification"]
+        C1_n["Consumer 1"]
+        CN_n["Consumer N"]
+    end
+
+    subgraph CG2["Consumer Group2 = analytics"]
+        C1_a["Consumer 1"]
+        CN_a["Consumer N"]
+    end
+
+    Producer1 --> KB1
+
+    %% Replication arrows
+    P0_L -- replicated --> P0_f
+    P1_L -- replicated --> P1_F
+    P2_L -- replicated --> P2_F
+
+    %% Consumers read from brokers
+    KB3 --> CG2
+    KB2 --> CG1
+`}/>
+
+
+# Responsibilities of Leaders
+
+Leaders handle:
+
+* Producer writes
+* Consumer reads
+* Partition logs
+* Synchronization with followers
+
+Clients always communicate with leaders.
+
+
+# Responsibilities of Followers
+
+Followers:
+
+* Replicate data from leaders
+* Stay synchronized
+* Become leaders if current leader fails
+
+Followers do NOT directly serve clients.
+
+Think of followers as hot standby replicas.
+
+
+# How Producers Find the Correct Broker
+
+Suppose a producer wants to write an event.
+
+It calculates:
+
+```text
+hash(key) % number_of_partitions
+```
+
+Example:
+
+```text
+hash(orderId) % 3 = Partition 1
+```
+
+Now producer must determine:
+
+```text
+Which broker hosts Partition 1 Leader?
+```
+
+Then it sends data directly to that broker.
+
+This is why Kafka clients need metadata about:
+
+* Topics
+* Partitions
+* Leaders
+
+
+# The Bigger Picture
+
+At this stage, the most important concepts to understand are:
+
+* Producers write to partitions
+* Consumers read from partitions
+* Consumer groups coordinate consumption
+* Offsets track progress
+* Offsets are stored in Kafka itself
+* Kafka clusters distribute partitions across brokers
+* Leaders serve traffic
+* Followers provide fault tolerance
+
+The next logical step is understanding:
+
+* Kafka Controller
+* Cluster coordination
+* Leader election
+* Rebalancing
+* ISR (In-Sync Replicas)
+
+Those concepts explain how Kafka manages distributed coordination internally.
