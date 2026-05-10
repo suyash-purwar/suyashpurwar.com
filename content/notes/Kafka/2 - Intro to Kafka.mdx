@@ -1,0 +1,557 @@
+---
+title: 2 - Intro to Kafka
+---
+
+import Mermaid from '@/components/base/Mermaid'
+
+# Kafka Event-Driven Architecture — Foundations
+
+Kafka is one of the most widely used systems for building **event-driven architectures** and real-time data pipelines. Before learning how to publish or consume messages, it is important to understand the core mental model behind Kafka and why its design looks the way it does.
+
+At a high level, Kafka is a:
+
+> **Distributed event streaming platform**
+
+That definition contains a lot of meaning.
+
+* **Distributed** → data is spread across multiple servers.
+* **Event streaming** → events are continuously written, stored, and consumed.
+* **Platform** → Kafka provides infrastructure for producers, consumers, storage, scaling, and fault tolerance.
+
+Unlike traditional pub-sub systems that simply forward messages, Kafka also stores events durably so they can be replayed later.
+
+
+
+# The Core Building Blocks
+
+## Producers
+
+A **producer** is any application that publishes events into Kafka.
+
+For example:
+
+* An e-commerce service publishing `order_created`
+* A payment service publishing `payment_completed`
+* A ride-sharing app publishing `driver_location_updated`
+
+The producer's responsibility is simple:
+
+> Send events to Kafka.
+
+The producer does **not** care who consumes the event.
+
+This is one of the biggest advantages of event-driven systems: **decoupling**.
+
+<Mermaid chart={`
+flowchart LR
+    Producer --> Kafka
+`} />
+
+The producer only knows:
+
+* Which topic to write to
+* What event data to send
+
+It does not know:
+
+* Who will consume the event
+* When it will be consumed
+* How many consumers exist
+
+
+
+## Topics
+
+A **topic** is a logical category of events.
+
+You can think of it like:
+
+* a folder,
+* a stream,
+* or a named channel.
+
+Examples:
+
+* `order-events`
+* `payment-events`
+* `user-events`
+
+A topic itself does not physically store data.
+
+It is mainly a **logical grouping mechanism**.
+
+<Mermaid chart={`
+flowchart LR
+    P1[Producer 1] --> T[order-events]
+    P2[Producer 2] --> T
+`} />
+
+Multiple producers can write to the same topic.
+
+
+
+# Partitions — The Most Important Kafka Concept
+
+Topics are divided into **partitions**.
+
+A partition is where the actual data is physically stored.
+
+This is one of the most important ideas in Kafka.
+
+## What a Partition Really Is
+
+A partition is:
+
+> An ordered, append-only log stored on disk.
+
+Each topic can have multiple partitions.
+
+<Mermaid chart={`
+flowchart TB
+    Topic[order-events Topic]
+
+    Topic --> P0[Partition 0]
+    Topic --> P1[Partition 1]
+    Topic --> P2[Partition 2]
+`} />
+
+
+# Why Partitions Exist
+
+Partitions solve multiple problems simultaneously:
+
+* Scalability
+* Parallelism
+* Ordering
+* Storage management
+
+Without partitions, one giant log file would become impossible to scale.
+
+
+
+# Ordered Logs and Offsets
+
+Every event written into a partition gets an **offset**.
+
+An offset is simply a sequential ID.
+
+Example:
+
+| Offset | Event             |
+| ------ | ----------------- |
+| 0      | Order Created     |
+| 1      | Payment Completed |
+| 2      | Order Shipped     |
+
+Kafka guarantees ordering **within a single partition**.
+
+That means:
+
+* Offset 2 happened after Offset 1
+* Offset 1 happened after Offset 0
+
+The ordering guarantee is local to the partition.
+
+
+
+## Important Limitation
+
+Kafka does **not** guarantee ordering across multiple partitions.
+
+Example:
+
+<Mermaid chart={`
+flowchart LR
+    E0[Event 0<br/>Partition 0 Offset 1]
+    E4[Event 4<br/>Partition 1 Offset 2]
+`} />
+
+You cannot confidently say whether `E4` happened before or after `E0`.
+
+Why?
+
+Because each partition maintains its own independent offset sequence.
+
+
+
+# Append-Only Logs
+
+Kafka partitions are **append-only**.
+
+New events are always added to the end.
+
+Kafka does not insert events in the middle.
+
+That makes writes extremely fast.
+
+<Mermaid chart={`
+flowchart LR
+    E0 --> E1 --> E2 --> E3 --> E4
+`} />
+
+This design is similar to writing continuously into a journal.
+
+Appending is much cheaper than random updates.
+
+
+
+# Consumers Read Sequentially
+
+Consumers typically read events in offset order.
+
+For example:
+
+* Read offsets 100–200
+* Continue from 201 later
+
+This sequential access pattern makes Kafka highly efficient for streaming workloads.
+
+
+
+# Partition Internals — Segment Files
+
+A partition is not actually one huge file.
+
+Internally, Kafka breaks partitions into **segments**. We can control the segment size as well.
+
+<Mermaid chart={`
+flowchart TB
+    Partition[Partition 0]
+
+    Partition --> S1[000000.log]
+    Partition --> S2[000500.log]
+    Partition --> S3[001000.log]
+`} />
+
+Each segment stores a range of offsets.
+
+Example:
+
+| Segment      | Offset Range |
+| ------------ | ------------ |
+| `000000.log` | 0-499        |
+| `000500.log` | 500-999      |
+| `001000.log` | 1000+        |
+
+
+
+# Why Segment Files Exist
+
+Imagine a consumer asking:
+
+> “Give me events from offset 550 to 800.”
+
+If Kafka stored everything in one giant file:
+
+* Kafka would need to scan enormous amounts of data.
+* Reads would become inefficient.
+
+With segments:
+
+* Kafka can directly jump to the relevant segment.
+* Only a small chunk of data must be loaded.
+
+This improves:
+
+* lookup speed,
+* memory usage,
+* and disk efficiency.
+
+
+
+# Segment Index Files
+
+Suppose, the segment file size is 1 GB. Scanning it again would again be an expensive operation. So, to speed it up, Kafka goes even further.
+
+Each segment also maintains an **index file**. The index maps offsets to approximate byte positions inside the log file.
+
+Example:
+
+| Offset | Byte Position |
+| ------ | ------------- |
+| 0      | 0             |
+| 150    | 4200          |
+| 290    | 8800          |
+
+This allows Kafka to quickly jump near the desired offset instead of scanning from the beginning.
+
+
+## Why Not Index Every Offset?
+
+Because the index itself would become huge.
+
+Instead, Kafka stores sparse index entries.
+
+For example:
+
+* Create one index entry every 4096 bytes.
+
+This creates a balance between:
+
+* memory efficiency
+* and lookup speed
+
+### How Kafka Creates Entries in a Segment Index
+
+It creates index entries periodically based on the configured:
+
+```text
+index.interval.bytes    (it's a kafka config setting)
+```
+
+This keeps the index file small while still allowing fast lookups.
+
+Let's say we have:
+
+* Topic: `order-events`
+* Partition: `order-events-0`
+* Segment: `000000.log`
+* `index.interval.bytes = 4096`
+
+The log file receives the following events:
+
+| Offset | Event Size | File Position |
+| ------ | ---------- | ------------- |
+| 0      | 300        | 0             |
+| 1      | 500        | 300           |
+| 2      | 1000       | 800           |
+| 3      | 2000       | 1800          |
+| 4      | 500        | 3800          |
+
+Now calculate total bytes written:
+
+```text
+300 + 500 + 1000 + 2000 + 500 = 4300 bytes
+```
+
+Since:
+
+```text
+4300 > 4096
+```
+
+Kafka creates an entry in the segment index file.
+
+The created index entry becomes:
+
+| Offset | Physical Position |
+| ------ | ----------------- |
+| 4      | 3800              |
+
+This means:
+
+> “Offset 4 can be found near byte position 3800 inside the log file.”
+
+Kafka can later use this information to jump directly near the required offset instead of scanning the entire log sequentially.
+
+Think of the index like bookmarks inside a huge book.
+
+Instead of marking every page:
+
+* Kafka places bookmarks every few thousand bytes.
+* During reads, Kafka jumps to the nearest bookmark first.
+* Then it scans only a small nearby portion.
+
+This makes lookups much faster while keeping memory usage low.
+
+# Partitioning Strategy — How Kafka Chooses a Partition
+
+When a producer sends an event, Kafka must decide:
+
+> Which partition should store this event?
+
+There are several strategies.
+
+
+## Key-Based Partitioning
+
+The producer provides a key.
+
+Kafka computes:
+
+```text
+hash(key) % number_of_partitions
+```
+
+Example:
+
+```text
+hash(orderId) % 3
+```
+
+This guarantees:
+
+> Events with the same key always go to the same partition.
+
+That is extremely important for maintaining ordering.
+
+For example:
+
+* All events for `order-123`
+* always land in the same partition
+* preserving event order for that order
+
+<Mermaid chart={`
+flowchart TB
+    Key[Order ID: 123]
+    Hash[Hash Function]
+    Mod[mod 3]
+    P1[Partition 1]
+
+    Key --> Hash --> Mod --> P1
+`} />
+
+
+
+## Round Robin Partitioning
+
+If no key is provided:
+
+Kafka distributes events evenly.
+
+Example:
+
+```text
+Event 1 → Partition 0
+Event 2 → Partition 1
+Event 3 → Partition 2
+Event 4 → Partition 0
+```
+
+This helps distribute load uniformly.
+
+
+
+## Custom Partitioning
+
+Applications can define custom rules.
+
+Example:
+
+* India traffic → Partition 0
+* US traffic → Partition 1
+
+This is useful for:
+
+* locality,
+* compliance,
+* workload isolation,
+* or custom routing logic.
+
+
+
+# Brokers
+
+A **broker** is a Kafka server instance.
+
+It is the machine/process that actually stores partitions and serves clients.
+
+<Mermaid chart={`
+flowchart LR
+    Producer --> Broker
+    Consumer --> Broker
+`} />
+
+The broker:
+
+* stores partition data,
+* handles reads/writes,
+* manages replication,
+* and communicates with producers/consumers.
+
+
+
+# Important Distributed Systems Idea
+
+A broker does **not** store everything.
+
+Kafka topics and partitions are distributed across multiple brokers.
+
+Example:
+
+<Mermaid chart={`
+flowchart TB
+    subgraph Broker1
+        P0[Order Topic - Partition 0]
+    end
+
+    subgraph Broker2
+        P1[Order Topic - Partition 1]
+    end
+
+    subgraph Broker3
+        P2[Order Topic - Partition 2]
+    end
+`} />
+
+This distribution enables:
+
+* horizontal scaling,
+* fault tolerance,
+* and massive throughput.
+
+
+
+# Key Mental Models
+
+## Kafka Is a Distributed Commit Log
+
+This is one of the most useful ways to think about Kafka.
+
+Kafka is fundamentally:
+
+> A distributed append-only log system.
+
+Everything else builds on top of that idea.
+
+
+
+## Topics Are Logical
+
+Topics are mostly organizational concepts.
+
+The real storage happens inside:
+
+* partitions,
+* segment files,
+* and log files.
+
+
+
+## Ordering Is Partition-Scoped
+
+Kafka guarantees order only within a single partition.
+
+This tradeoff is what allows Kafka to scale horizontally.
+
+
+
+## Kafka Optimizes Sequential Disk Access
+
+Kafka's architecture is heavily optimized around:
+
+* appending,
+* sequential reads,
+* and predictable disk access.
+
+That is one reason Kafka can handle extremely high throughput.
+
+
+
+# Practical Intuition
+
+Imagine Kafka like a library system.
+
+* **Topic** → a bookshelf category
+* **Partition** → an individual shelf
+* **Offset** → the position of a book on the shelf
+* **Segment** → smaller sections within the shelf
+* **Broker** → the building storing shelves
+* **Producer** → someone placing books
+* **Consumer** → someone reading books
+
+The key idea:
+
+> Books are always added to the end of shelves, never inserted in the middle.
+
+That simple design decision is what makes Kafka extremely fast and scalable.

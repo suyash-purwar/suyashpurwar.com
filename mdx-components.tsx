@@ -20,6 +20,12 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
         {...props}
       />
     ),
+    h4: (props) => (
+      <h2
+        className="mt-2 font-semibold"
+        {...props}
+      />
+    ),
     p: (props) => (
       <p className="mb-2" {...props} />
     ),
