@@ -632,27 +632,3 @@ This is why Kafka clients need metadata about:
 * Topics
 * Partitions
 * Leaders
-
-
-# The Bigger Picture
-
-At this stage, the most important concepts to understand are:
-
-* Producers write to partitions
-* Consumers read from partitions
-* Consumer groups coordinate consumption
-* Offsets track progress
-* Offsets are stored in Kafka itself
-* Kafka clusters distribute partitions across brokers
-* Leaders serve traffic
-* Followers provide fault tolerance
-
-The next logical step is understanding:
-
-* Kafka Controller
-* Cluster coordination
-* Leader election
-* Rebalancing
-* ISR (In-Sync Replicas)
-
-Those concepts explain how Kafka manages distributed coordination internally.
