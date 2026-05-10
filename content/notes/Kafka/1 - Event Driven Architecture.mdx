@@ -1,0 +1,712 @@
+import Mermaid from '@/components/base/Mermaid'
+
+# Introduction to Event-Driven Architecture (EDA)
+
+In traditional distributed microservices, services often communicate synchronously using REST APIs. One service directly calls another and waits for a response before continuing.
+
+That approach works, but once systems grow larger, synchronous communication starts introducing problems:
+
+* Higher latency
+* Tight coupling between services
+* Cascading failures
+* Difficult scaling
+* Lower resilience
+
+This is where **Event-Driven Architecture (EDA)** becomes important.
+
+EDA is a system design style where services communicate through **events** instead of directly calling one another.
+
+# What Is an Event?
+
+An **event** is simply a fact that something already happened in the past.
+
+Examples:
+
+* `OrderCreated`
+* `PaymentSucceeded`
+* `InventoryReserved`
+
+An event is **not** an instruction.
+
+There is an important distinction between:
+
+| Type    | Meaning                              | Example           |
+| ---- | ------------------------------------ | ----------------- |
+| Command | Asking something to happen           | `PlaceOrder`      |
+| Event   | Reporting something already happened | `OrderCreated`    |
+| Query   | Asking for data                      | `GetOrderDetails` |
+
+A useful mental model:
+
+* **Commands** are requests.
+* **Events** are historical facts.
+* **Queries** are reads.
+
+Events are usually:
+
+* Immutable
+* Written in past tense
+* Self-contained
+
+Once an event says `OrderCreated`, that fact cannot be changed. The order was created — that already happened.
+
+
+
+# The Core Idea Behind EDA
+
+Instead of services directly calling each other:
+
+* One service publishes an event
+* Other services react to it independently
+
+The producer does not care who consumes the event.
+
+This creates loose coupling between services.
+
+
+
+# Traditional REST-Based Microservice Flow
+
+Imagine an e-commerce order system with:
+
+* User Service
+* Order Service
+* Payment Service
+* Inventory Service
+* Notification Service
+
+In a synchronous REST-based setup, the flow might look like this:
+
+<Mermaid chart={`
+flowchart LR
+    User --> OrderService
+    OrderService --> InventoryService
+    OrderService --> PaymentService
+    OrderService --> NotificationService
+`} />
+
+The order service becomes responsible for orchestrating everything.
+
+A typical flow:
+
+1. User places order
+2. Order service checks inventory
+3. Payment is processed
+4. Inventory is reserved
+5. Notification is sent
+6. Response is returned to the user
+
+
+
+# Problems With Synchronous Communication
+
+## Availability Issues
+
+Every service must be available at the same time.
+
+If even one service fails:
+
+* the entire request may fail.
+
+Example:
+
+* Payment service works
+* Notification service works
+* Inventory service is down
+
+Result:
+The order flow breaks.
+
+
+
+## Latency Accumulation
+
+Total response time becomes the sum of all service latencies.
+
+If:
+
+* Inventory takes 200ms
+* Payment takes 500ms
+* Notification takes 100ms
+
+Then the user waits for all of them combined.
+
+Conceptually:
+
+```txt
+T_total = T_1 + T_2 + T_3 + T_4
+```
+
+The longer the chain, the slower the request.
+
+
+
+## Cascading Failures
+
+One slow service can affect the entire system.
+
+Example:
+
+* Inventory service becomes slow
+* Requests pile up
+* Payment service waits
+* Order service waits
+
+Eventually, failures spread throughout the system.
+
+This is called a **cascading failure**.
+
+
+
+## Tight Coupling
+
+The order service now needs to know:
+
+* where payment service lives
+* how inventory works
+* what response formats look like
+* retry behavior
+* timeout logic
+
+Services become deeply dependent on one another.
+
+
+
+## Scaling Problems
+
+Suppose:
+
+* Payment service can now handle 1000 requests/minute
+* Inventory service still handles only 100 requests/minute
+
+The system is still bottlenecked by inventory.
+
+In tightly synchronized systems, scaling one service alone often does not help much.
+
+
+
+# Reimagining the Same Flow Using EDA
+
+Now let's redesign the same order system using events.
+
+<Mermaid chart={`
+flowchart TD
+    User --> OrderService
+    OrderService --> EventRouter
+
+    EventRouter --> PaymentService
+    EventRouter --> InventoryService
+
+    PaymentService --> EventRouter
+    InventoryService --> EventRouter
+
+    EventRouter --> NotificationService
+    EventRouter --> OrderService
+`} />
+
+The biggest difference:
+
+* Services no longer directly call one another.
+* They communicate through an event router/broker.
+
+The broker could be something like:
+
+* Apache Kafka
+* RabbitMQ
+
+
+
+# Step-by-Step EDA Flow
+
+## Initial Real-Time Work
+
+The order service still performs critical operations synchronously.
+
+Example:
+
+* Validate request
+* Check real-time inventory
+* Save order as `PENDING`
+
+Then it publishes:
+
+```text
+OrderCreated
+```
+
+The user immediately receives:
+
+```text
+Order Accepted
+```
+
+This dramatically reduces user-facing latency.
+
+
+
+## Asynchronous Processing Begins
+
+The broker now distributes the `OrderCreated` event to interested consumers.
+
+Example:
+
+* Payment Service consumes it
+* Inventory Service consumes it
+
+Each service independently performs its work.
+
+
+
+## Services Publish More Events
+
+After payment succeeds:
+
+```text
+PaymentSucceeded
+```
+
+After inventory is reserved:
+
+```text
+InventoryReserved
+```
+
+The notification service may listen to `PaymentSucceeded` and send an email.
+
+The order service may also listen and mark the order as completed.
+
+This creates a chain of reactive behavior.
+
+
+
+# The Role of the Event Broker
+
+The broker acts like a mediator.
+
+It:
+
+* receives events
+* stores/routes them
+* forwards them to interested consumers
+
+The broker itself usually does not care what the events mean.
+
+It simply routes messages.
+
+
+
+# Advantages of Event-Driven Architecture
+
+## Loose Coupling
+
+Services do not directly depend on one another.
+
+A payment service can change internally without affecting the order service.
+
+
+
+## Independent Scalability
+
+Each service can scale based on its own workload.
+
+If payment processing becomes heavy:
+
+* only payment service needs scaling.
+
+
+
+## Better Resilience
+
+Temporary failures do not necessarily break the entire system.
+
+Example:
+
+* Inventory service goes down temporarily
+* Orders can still be accepted
+* Events remain queued
+* Inventory processing resumes later
+
+The system degrades gracefully instead of collapsing.
+
+
+
+## Replayability
+
+Some systems can replay old events.
+
+This becomes extremely useful for:
+
+* rebuilding state
+* debugging
+* analytics
+* disaster recovery
+
+
+
+## Improved Latency
+
+The user no longer waits for every downstream operation.
+
+Only the critical path stays synchronous.
+
+Everything else becomes asynchronous.
+
+
+
+# Core Components of EDA
+
+## Producer
+
+The service that publishes events.
+
+Example:
+Order service publishing `OrderCreated`.
+
+
+
+## Broker / Event Router
+
+The middle layer that routes events.
+
+Examples:
+
+* Apache Kafka
+* RabbitMQ
+
+
+
+## Consumer
+
+The service that reacts to events.
+
+Example:
+
+* Payment service consuming `OrderCreated`
+
+
+
+# How Events Move Through the System
+
+There are two common delivery models.
+
+
+
+# Push Model
+
+The broker immediately pushes messages to consumers.
+
+<Mermaid chart ={`
+flowchart LR
+    Producer --> Broker
+    Broker --> Consumer
+`} />
+
+Problem:
+Consumers may get overwhelmed if events arrive too fast.
+
+
+
+# Pull Model
+
+Consumers request messages at their own pace.
+
+<Mermaid chart ={`
+flowchart LR
+    Producer --> Broker
+    Consumer --> Broker
+    Broker --> Consumer
+`} />
+
+Advantages:
+
+* Better consumer control
+* Backpressure handling
+* More stable processing
+
+This is common in systems like Apache Kafka.
+
+
+
+# Pub/Sub vs Streaming
+
+These are two major EDA models.
+
+
+
+# Pub/Sub Model
+
+Events are delivered only to active subscribers.
+
+Once consumed, they are typically forgotten.
+
+New consumers cannot replay old messages.
+
+Example:
+RabbitMQ exchanges.
+
+Good for:
+
+* notifications
+* lightweight messaging
+* temporary communication
+
+
+
+# Streaming Model
+
+Events are stored in logs for some duration (or forever).
+
+New consumers can replay history.
+
+Example:
+Apache Kafka.
+
+This enables:
+
+* event replay
+* analytics
+* auditing
+* rebuilding system state
+
+A good analogy:
+
+* Pub/Sub is like live radio.
+* Streaming is like YouTube playback history.
+
+
+
+# Challenges of Event-Driven Architecture
+
+EDA solves many problems, but introduces new ones.
+
+
+
+# Eventual Consistency
+
+Data may temporarily become stale.
+
+Example:
+
+* User places order
+* Immediately fetches order status
+* System still shows `PENDING`
+
+After some time:
+
+* status becomes `COMPLETED`
+
+The system eventually becomes consistent.
+
+
+
+# Duplicate Events
+
+Many brokers guarantee **at least once delivery**.
+
+That means consumers may receive the same event multiple times.
+
+Consumers must therefore be:
+
+* idempotent
+* duplicate-safe
+
+
+
+# Ordering Problems
+
+Events may arrive out of order.
+
+Example:
+
+```text
+PaymentSucceeded
+OrderCreated
+```
+
+instead of:
+
+```text
+OrderCreated
+PaymentSucceeded
+```
+
+If not handled carefully, this can corrupt system state.
+
+
+
+# Schema Evolution
+
+Changing event structure can break consumers.
+
+Example:
+
+Old event:
+
+```json
+{
+  "orderId": 1
+}
+```
+
+New event:
+
+```json
+{
+  "id": 1
+}
+```
+
+Consumers expecting `orderId` may crash.
+
+This is why event versioning becomes important.
+
+
+
+# Debugging Complexity
+
+Tracing failures becomes harder because processing is asynchronous and distributed.
+
+Instead of one request chain, you now have:
+
+* events
+* retries
+* queues
+* multiple consumers
+* parallel execution
+
+Distributed tracing tools become essential.
+
+
+
+# Poison Messages
+
+Sometimes a malformed event repeatedly fails processing.
+
+If not handled properly, one bad message can block the queue or consumer pipeline.
+
+Systems often solve this using:
+
+* dead-letter queues
+* retries
+* validation
+
+
+
+# Operational Overhead
+
+EDA systems require infrastructure monitoring.
+
+Teams must track:
+
+* consumer lag
+* throughput
+* partitions
+* retry rates
+* queue depth
+
+Operating large event systems requires careful engineering.
+
+
+
+# When Should You Use EDA?
+
+EDA is especially useful when:
+
+
+
+## One Event Has Many Consumers
+
+Example:
+
+`OrderCreated` may trigger:
+
+* payment
+* inventory
+* email
+* analytics
+* fraud detection
+
+EDA fits naturally here.
+
+
+
+## Long-Running Business Workflows
+
+Example:
+
+* order
+* shipment
+* delivery
+* invoicing
+
+These flows involve many services and take time.
+
+EDA handles this well.
+
+
+
+## Eventual Consistency Is Acceptable
+
+If small delays are okay, EDA becomes a strong option.
+
+Not every operation must be instantly consistent.
+
+
+
+## Real-Time Analytics
+
+EDA works extremely well for streaming data pipelines.
+
+Example:
+
+* clickstream processing
+* metrics aggregation
+* fraud detection
+* recommendation systems
+
+
+
+# Critical vs Non-Critical Work
+
+One of the most important design ideas in EDA is separating:
+
+* critical synchronous work
+* non-critical asynchronous work
+
+Example:
+
+Critical:
+
+* validate order
+* save order
+* respond to user
+
+Non-critical:
+
+* analytics
+* notifications
+* emails
+* reporting
+
+The critical path should stay small and fast.
+
+Everything else can happen asynchronously.
+
+
+
+# Final Mental Model
+
+A useful way to think about EDA:
+
+Traditional REST systems are like making phone calls.
+
+* One service directly talks to another
+* Both must be available together
+
+EDA is more like publishing newspapers.
+
+* Producers publish information
+* Interested consumers read it independently
+* Producers do not care who reads it
+
+That decoupling is what makes EDA powerful at scale.
