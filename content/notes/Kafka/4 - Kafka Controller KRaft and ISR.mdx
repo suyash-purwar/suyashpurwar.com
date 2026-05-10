@@ -1,0 +1,485 @@
+---
+title: 4 - Kafka Controller, KRaft, and ISR
+---
+
+import Mermaid from '@/components/base/Mermaid'
+
+
+This section explains **who coordinates the entire Kafka cluster**, how Kafka avoids a **single point of failure**, and how Kafka ensures replicas stay synchronized.
+
+# The Kafka Controller
+
+A Kafka cluster can contain many brokers.
+Each broker stores topics and partitions, and some partitions act as leaders while others act as followers.
+
+That naturally raises a question:
+
+> Who decides which broker becomes leader for a partition?
+> Who tracks broker failures?
+> Who updates cluster-wide metadata?
+
+That responsibility belongs to the **Kafka Controller**.
+
+
+# What Is a Controller?
+
+A controller is simply a **special Kafka broker** with additional responsibilities.
+
+Its job is to coordinate the cluster.
+
+The controller handles things like:
+
+* Topic creation
+* Partition assignment
+* Leader/follower election
+* Detecting broker failures
+* Updating cluster metadata
+* Informing brokers about cluster changes
+
+You can think of it as the **cluster coordinator**.
+
+
+# What Metadata Does the Controller Maintain?
+
+The controller maintains something called the **cluster metadata log**. It is present in the `_cluster_metadata.log` file.
+
+This metadata contains information such as:
+
+* Existing topics
+* Number of partitions
+* Replication factors
+* Which broker is leader for each partition
+* Which brokers are followers
+* ISR (In-Sync Replica) information
+
+The metadata log is extremely important because the entire cluster depends on it.
+
+
+# Topic Creation Flow
+
+Suppose an admin creates a topic called `order-events`.
+
+Configuration:
+
+* Partitions = 3
+* Replication factor = 2
+
+That means:
+
+* Partition 0 -> leader + follower
+* Partition 1 -> leader + follower
+* Partition 2 -> leader + follower
+
+So there will be **6 replicas total**.
+
+
+## How the Request Flows
+
+The producer or admin client does **not** directly talk to the controller.
+
+Instead:
+
+1. The request goes to any broker.
+2. That broker forwards the request to the active controller.
+3. The controller decides:
+   * which broker hosts each partition
+   * who becomes leader
+   * who becomes follower
+4. The controller updates the cluster metadata.
+5. The metadata is propagated to all brokers.
+
+
+## Topic Creation Flow Diagram
+
+<Mermaid chart={`
+sequenceDiagram
+    participant Admin
+    participant Broker
+    participant Controller
+    participant Broker1
+    participant Broker2
+
+    Admin->>Broker: Create Topic(order-events)
+    Broker->>Controller: Forward request
+
+    Controller->>Controller: Decide leaders/followers
+    Controller->>Controller: Update metadata log
+
+    Controller->>Broker1: Metadata update
+    Controller->>Broker2: Metadata update
+`} />
+
+
+# The Problem: Single Point of Failure
+
+Initially, Kafka had one active controller. It's a bottleneck for Kafka cluster and can create a dangerous situation:
+
+* If the controller crashes:
+  * topic creation stops
+  * broker failure handling stops
+  * heartbeat tracking of controller stops
+  * metadata updates stop
+  * partition leader and follower election stops
+
+The controller becomes a **single point of failure**.
+
+# Multiple Controllers
+
+Instead of having single controller, we need multiple controllers to solve this problem. But then who decides who is an active controller and who are standby controllers?
+
+For this we use consensus algorithm. So using consensus algorithm, Kafka can elect an active controller and standby controllers.
+
+Example:
+
+* Controller 1
+* Controller 2
+* Controller 3
+
+Only **one controller is active at a time**. The others remain standby controllers.
+
+Kafka initially used Apache ZooKeeper for this purpose. However, this added operational complexity. Later, Kafka introduced **KRaft** (Kafka Raft) as a built-in consensus system to eliminate the need for ZooKeeper.
+
+<Mermaid chart={`
+flowchart LR
+    Producer1["Producer1"]
+
+    subgraph KC["Kafka Cluster"]
+        subgraph Brokers["Brokers"]
+            subgraph KB1["Kafka Broker-1"]
+                subgraph T1["Topic: order-events"]
+                    P0["P0 : Leader"]
+                    P1F["P1 - Follower"]
+                end
+            end
+
+            subgraph KB2["Kafka Broker-2"]
+                subgraph T2["Topic: order-events"]
+                    P1L["P1 - Leader"]
+                    P2F["P2 - Follower"]
+                end
+            end
+        end
+
+        subgraph Controllers["Controllers"]
+            C1["Controller1\n(Active)"]
+            C2["Controller2\n(Stand By)"]
+            C3["Controller3\n(Stand By)"]
+        end
+    end
+
+    subgraph CG1["Consumer Group1 = notification"]
+        Con1_1["Consumer 1"]
+        Con1_N["Consumer N"]
+    end
+
+    subgraph CG2["Consumer Group2 = analytics"]
+        Con2_1["Consumer 1"]
+        Con2_N["Consumer N"]
+    end
+
+    Producer1 -->|"publish"| KB1
+
+    KB2 -->|"read"| CG1
+    KB2 -->|"read"| CG2
+
+    KB1 <-->|"heartbeats"| Controllers
+    KB2 <-->|"Metadata updates"| Controllers
+
+    C1 <-->|"heartbeats"| C2
+    C2 <-->|"heartbeats"| C3
+`} />
+
+# ZooKeeper vs KRaft
+
+ZooKeeper was an external distributed system responsible for:
+
+* metadata coordination
+* controller election
+* consensus
+
+But this had drawbacks:
+
+* Separate deployment
+* Separate monitoring
+* Additional operational complexity
+
+Modern Kafka replaced ZooKeeper with **KRaft** (Kafka Raft). KRaft is baked into Kafka itself and requires lesser overhead.
+
+
+# What Is KRaft?
+
+KRaft is Kafka's built-in consensus system based on the **Raft consensus algorithm**.
+
+Instead of relying on an external service, Kafka controllers themselves participate in consensus.
+
+So now:
+
+* metadata management
+* controller election
+* replication agreement
+
+all happen inside Kafka itself.
+
+
+# Who Decides the Active Controller?
+
+This is handled through the **Raft consensus algorithm**.
+
+Controllers vote among themselves.
+
+The majority decision becomes final.
+
+This is called a **quorum**.
+
+
+# Understanding Quorum
+
+For a cluster of `N` controllers, Quorum requires a majority:
+
+```txt
+floor(N/2) + 1
+```
+
+Example:
+
+* 3 controllers → quorum = 2
+* 5 controllers → quorum = 3
+
+A decision is accepted only if the majority agrees.
+
+
+# Why Consensus Is Needed
+
+Consensus ensures:
+
+* only one active controller exists
+* metadata changes are consistent
+* cluster state survives failures
+
+Without consensus, different controllers could disagree about cluster state, causing corruption and split-brain scenarios.
+
+
+# KRaft Metadata Commit Flow
+
+When a topic creation request arrives:
+
+1. Broker forwards request to active controller.
+2. Active controller creates metadata changes.
+3. Metadata is written locally but marked **uncommitted**.
+4. The controller asks standby controllers to replicate the metadata.
+5. Once the majority acknowledges:
+   * metadata becomes committed
+   * committed offset advances
+6. Brokers receive updated metadata.
+
+<Mermaid chart={`
+flowchart LR
+    A[Admin Request] --> B[Broker]
+    B --> C[Active Controller]
+
+    C --> D[Write Metadata Locally]
+    D --> E[Send to Standby Controllers]
+
+    E --> F{Majority Ack?}
+
+    F -->|Yes| G[Commit Metadata]
+    G --> H[Update Brokers]
+
+    F -->|No| I[Remain Uncommitted]
+`} />
+
+# High Watermark
+
+Kafka only considers a message “committed” when all ISR replicas have replicated it.
+
+This simply means:
+
+> The latest committed offset agreed upon by the quorum.
+
+Example:
+
+* Offset 99 → committed
+* Offset 100 → written locally but not committed yet
+
+Only after quorum approval does offset 100 become committed.
+Consumers normally read only committed messages.
+
+# Controller Heartbeats
+
+The active controller continuously sends heartbeats to standby controllers.
+
+These heartbeats contain:
+
+* liveness information
+* latest committed offset
+
+This helps standby controllers stay synchronized.
+
+If the active controller crashes, one standby controller can quickly take over.
+
+
+# ISR (In-Sync Replica)
+
+Another important metadata structure maintained by the controller is the **ISR list**.
+
+ISR stands for:
+
+> In-Sync Replicas
+
+For each partition, Kafka tracks which replicas are fully synchronized with the leader. ISR is Kafka's way of deciding which replicas are reliable enough to participate in durability guarantees. Kafka does not trust replicas that are far behind.
+
+# Example of ISR
+
+Suppose:
+
+* Replication factor = 3
+* One leader
+* Two followers
+
+```text
+Broker 1 → Leader
+Broker 2 → Follower
+Broker 3 → Follower
+```
+
+If all replicas are caught up:
+
+```text
+ISR = [Broker1, Broker2, Broker3]
+```
+
+
+# What Happens When a Replica Lags?
+
+Followers continuously pull updates from the leader.
+
+If a follower stops keeping up for too long:
+
+* it is removed from ISR
+
+Example:
+
+```text
+Leader offset = 900
+Follower offset = 900
+Another follower offset = 820
+```
+
+If the lag exceeds the configured threshold, Kafka removes that replica from ISR.
+
+Now:
+
+```text
+ISR = [Leader, Follower]
+```
+
+
+# ISR Update Flow
+
+<Mermaid chart={`
+flowchart LR
+    Follower -->|Poll latest data| Leader
+
+    Leader -->|Track lag| Leader
+
+    Leader -->|Replica too slow| ISRUpdate[Update ISR List]
+
+    ISRUpdate --> Controller
+`} />
+
+
+# Why ISR Matters
+
+ISR directly affects **message durability**.
+
+When producers send messages, they can choose acknowledgment modes:
+
+* `acks=0`
+* `acks=1`
+* `acks=all`
+
+
+# `acks=0`
+
+Producer sends the message and does not wait for any confirmation. Fastest but least reliable.
+
+
+# `acks=1`
+
+Producer waits only for the leader to persist the message. It does not wait for the followers to replicate the message. Leader acknowledges the write and then producer considers the message as replicated. Followers may still not have replicated it.
+
+
+# `acks=all`
+
+Producer waits until **all ISR replicas** acknowledge the write. Note that all ISR replicas does not mean all replicas. Few replicas can be there which are not in sync and can be removed from ISR. And `acks=all` means producer waits for all the ISR replicas to acknowledge the write. If ISR only has the leader, `acks=all` would still be satisfied.
+
+This gives the strongest durability guarantee. It can be less performant than `acks=1` but it is more reliable. 
+
+
+# Example of `acks=all`
+
+Suppose ISR contains:
+
+```text
+ISR = [Broker1, Broker2, Broker3]
+```
+
+Flow:
+
+1. Producer sends message to leader.
+2. Leader writes message.
+3. Followers replicate the message.
+4. All ISR replicas acknowledge.
+5. Producer receives success response.
+
+
+# Minimum In-Sync Replicas
+
+Kafka also supports:
+
+```text
+min.insync.replicas
+```
+
+This defines the minimum number of ISR replicas required for successful writes.
+
+Example:
+
+```text
+Replication factor = 3
+min.insync.replicas = 2
+acks = all
+```
+
+If only one replica remains in ISR:
+
+```text
+ISR = [Leader]
+```
+
+Kafka rejects writes because durability guarantees can no longer be met.
+
+
+# Important Insight About ISR
+
+ISR can shrink, but it can never become completely empty because:
+
+* the leader itself is always part of ISR
+
+So at minimum:
+
+```text
+ISR = [Leader]
+```
+
+
+# Mental Model
+
+A useful way to think about Kafka internals:
+
+| Component  | Responsibility                        |
+| ---------- | ------------------------------------- |
+| Broker     | Stores and serves data                |
+| Controller | Coordinates the cluster               |
+| KRaft      | Ensures consensus and fault tolerance |
+| ISR        | Tracks healthy synchronized replicas  |
