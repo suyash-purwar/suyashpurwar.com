@@ -1,0 +1,669 @@
+---
+title: 5 - Kafka Producer and Consumer Flow
+---
+
+import Mermaid from '@/components/base/Mermaid'
+
+# Producer Write Flow
+
+Imagine a producer wants to publish an event to a topic called `order-events`.
+
+The producer sends:
+
+* Topic name
+* Key
+* Value
+* Acknowledgement configuration (`acks=all`)
+
+Example:
+
+```json
+{
+  "topic": "order-events",
+  "key": "user-42",
+  "value": {
+    "orderId": 1001,
+    "amount": 500
+  },
+  "acks": "all"
+}
+```
+
+
+## Producer Needs Metadata First
+
+A Kafka cluster contains multiple brokers.
+
+The producer cannot randomly send data to any broker. It must determine:
+
+* Which partition should receive the event
+* Which broker is the leader for that partition
+
+So the producer first requests **metadata**.
+
+The metadata contains information like:
+
+* Topic partitions
+* Partition leaders
+* Replica assignments
+
+Example:
+
+| Partition   | Leader Broker |
+| ----------- | ------------- |
+| Partition 0 | Broker 1      |
+| Partition 1 | Broker 2      |
+| Partition 2 | Broker 3      |
+
+If the broker receiving the metadata request does not have fresh metadata, it contacts the active controller.
+
+
+## Partition Selection
+
+Kafka determines the partition using:
+
+```text
+hash(key) % number_of_partitions
+```
+
+If:
+
+```text
+hash("user-42") % 3 = 1
+```
+
+then the event belongs to:
+
+```text
+Partition 1
+```
+
+From metadata, the producer knows:
+
+```text
+Partition 1 → Broker 2 is leader
+```
+
+So the producer directly sends the event to Broker 2.
+
+
+## Broker Writes the Event
+
+Broker 2 appends the event to the partition log.
+
+Kafka logs are append-only.
+
+Example:
+
+```text
+Partition-1 Log
+
+Offset 100 -> older event
+Offset 101 -> new event
+```
+
+Kafka never inserts in the middle.
+
+It only appends at the end.
+
+This is extremely important because append-only sequential writes are very fast on disk.
+
+
+## ISR and Acknowledgements
+
+The producer used:
+
+```text
+acks=all
+```
+
+That means the leader broker cannot immediately acknowledge success.
+
+Instead:
+
+1. Leader writes the event
+2. Followers in ISR replicate the event
+3. Leader waits for ISR acknowledgement
+4. Only then does Kafka respond to the producer
+
+Example ISR:
+
+```text
+ISR = [Broker1, Broker2, Broker3]
+```
+
+If Broker 2 is the leader:
+
+* Broker 1 and Broker 3 must also replicate the event
+* Then the producer receives success response
+
+This provides stronger durability guarantees.
+
+
+## Complete Producer Flow
+
+<Mermaid chart={`
+sequenceDiagram
+    autonumber
+
+    participant P as Producer
+    participant B as Bootstrap Broker
+    participant CT as Controller
+    participant LB as Leader Broker<br/>order-events-p1
+    participant ISR as ISR Followers
+
+    %% =====================================================
+    %% PRODUCER EVENT CREATION
+    %% =====================================================
+
+    Note over P: Producer creates event
+
+    P->>P: Create ProducerRecord<br/>(topic,key,value,acks=all)
+
+    Note over P: Example:<br/>topic=order-events<br/>key=user-42
+
+    %% =====================================================
+    %% METADATA DISCOVERY
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over P,B: Phase 1 - Metadata Discovery
+
+    P->>B: MetadataRequest(topic=order-events)
+
+    alt Broker metadata cache is fresh
+
+        B-->>P: MetadataResponse
+
+    else Metadata cache stale
+
+        B->>CT: Fetch latest cluster metadata
+
+        CT-->>B: Latest metadata
+
+        B-->>P: MetadataResponse
+
+    end
+
+    Note over P: Metadata contains:<br/><br/>p0 -> Broker 1<br/>p1 -> Broker 2<br/>p2 -> Broker 3
+
+    end
+
+    %% =====================================================
+    %% PARTITION SELECTION
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over P: Phase 2 - Partition Selection
+
+    P->>P: Compute partition<br/>hash(key) % totalPartitions
+
+    Note over P: hash(user-42) % 3 = 1
+
+    Note over P: Partition 1 selected
+
+    Note over P: Metadata says:<br/>Partition 1 leader = Broker 2
+
+    end
+
+    %% =====================================================
+    %% PRODUCE REQUEST
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over P,LB: Phase 3 - Produce Request
+
+    P->>LB: ProduceRequest<br/>(partition=p1,event,acks=all)
+
+    Note over LB: Broker 2 is leader<br/>for partition 1
+
+    end
+
+    %% =====================================================
+    %% EVENT APPEND
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over LB: Phase 4 - Append Event
+
+    Note over LB: Existing offsets:<br/>99<br/>100
+
+    LB->>LB: Append event at offset 101
+
+    Note over LB: Kafka logs are append-only
+
+    end
+
+    %% =====================================================
+    %% ISR REPLICATION
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over LB,ISR: Phase 5 - Replication to ISR Followers
+
+    Note over LB: ISR = all in-sync replicas
+
+    ISR->>LB: Fetch latest records
+
+    LB-->>ISR: Replication batch
+
+    ISR->>ISR: Append event to follower logs
+
+    ISR-->>LB: Replication ACK(offset=101)
+
+    end
+
+    %% =====================================================
+    %% ACKNOWLEDGEMENT
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over LB: acks=all configured
+
+    Note over LB: Wait for all ISR replicas<br/>to acknowledge offset 101
+
+    LB->>LB: Verify ISR replication success
+
+    LB-->>P: ProduceResponse(success,offset=101)
+
+    end
+
+    %% =====================================================
+    %% NEXT WRITE
+    %% =====================================================
+
+    rect rgb(242, 229, 188)
+
+    Note over P: Producer continues sending events
+
+    end
+`} />
+
+
+# Consumer Read Flow
+
+Consumers work differently from producers.
+
+Kafka consumers are **poll-based**, not push-based.
+
+Kafka never pushes data automatically.
+
+Consumers continuously ask Kafka for new data.
+
+
+# Consumer Groups and Group Coordinators
+
+Suppose a consumer joins a group:
+
+```text
+notification-service-group
+```
+
+Kafka must determine:
+
+* Which broker will coordinate this group
+* Which partitions this consumer should read
+
+Kafka uses the internal topic:
+
+```text
+__consumer_offsets
+```
+
+This topic itself has partitions.
+
+Example:
+
+```text
+50 partitions
+```
+
+Kafka calculates:
+
+```text
+hash(groupId) % 50
+```
+
+If:
+
+```text
+hash(notification-service-group) % 50 = 23
+```
+
+then:
+
+```text
+Partition 23 of __consumer_offsets
+```
+
+manages this consumer group.
+
+Whichever broker is leader for Partition 23 becomes the:
+
+```text
+Group Coordinator
+```
+
+
+# Consumer Fetches Metadata
+
+Just like producers, consumers also need cluster metadata.
+
+The consumer requests:
+
+* Topic information
+* Partition leaders
+* Coordinator information
+
+The controller provides metadata if brokers do not already have fresh copies.
+
+
+# Joining the Consumer Group
+
+The consumer contacts the group coordinator.
+
+The coordinator:
+
+* Registers the consumer
+* Assigns partitions
+* Stores consumer group metadata inside `__consumer_offsets`
+
+Example assignment:
+
+```text
+Consumer-3 → Partition-2 of order-events
+```
+
+This information is replicated across ISR replicas of the coordinator partition.
+
+
+# Finding the Last Committed Offset
+
+Suppose a previous consumer crashed. The new consumer must know where to resume reading. The consumer again contacts the group coordinator. The coordinator checks `__consumer_offsets`.
+
+The lookup key looks conceptually like:
+
+```text
+(groupId, topic, partition)
+```
+
+Example:
+
+```text
+(notification-service-group, order-events, partition-2)
+```
+
+The stored value:
+
+```text
+last_processed_offset = 101
+```
+
+So the consumer resumes from offset 101.
+
+
+# Fetching Messages
+
+Now the consumer directly contacts the leader broker for the assigned partition.
+
+Example:
+
+```text
+order-events → partition-2 → leader = Broker 2
+```
+
+The consumer requests:
+
+```text
+Fetch from offset 101
+Return 200 bytes
+```
+
+Kafka returns records sequentially.
+
+Example:
+
+```text
+101
+102
+103
+...
+```
+
+The consumer processes the batch.
+
+
+# Offset Commit
+
+After processing completes, the consumer commits offsets back to Kafka.
+
+This commit is stored in:
+
+```text
+__consumer_offsets
+```
+
+Again, the consumer talks to the group coordinator.
+
+Example commit:
+
+```text
+Processed till offset 501
+```
+
+Now if the consumer crashes later, Kafka knows where to resume.
+
+
+# Complete Consumer Registration & Fetch Flow
+
+<Mermaid chart={`
+sequenceDiagram
+    autonumber
+
+    participant C as Consumer
+    participant B as Any Broker
+    participant GC as Group Coordinator
+    participant CO as __consumer_offsets
+    participant LB as Leader Broker<br/>for Topic Partition
+    participant ISR as ISR Followers
+
+    Note over C: Consumer starts with<br/>group.id=notification-service
+
+    C->>B: Request cluster metadata
+    B-->>C: Topics, partitions, leaders,<br/>consumer offset partition leaders
+
+    Note over C: Consumer calculates:<br/>hash(group.id) % 50<br/>= Partition 23
+
+    C->>GC: Find coordinator for Partition 23
+    GC-->>C: I am the coordinator
+
+    rect rgb(242, 229, 188)
+
+    Note over C,GC: Consumer Group Join Phase
+
+    C->>GC: JoinGroupRequest
+    GC->>CO: Store consumer membership metadata
+    CO->>ISR: Replicate metadata to ISR followers
+    ISR-->>CO: Acknowledged
+
+    GC->>GC: Trigger rebalance
+
+    GC-->>C: Assigned partition-2 of order-events
+
+    end
+
+    rect rgb(242, 229, 188)
+
+    Note over C,GC: Offset Recovery Phase
+
+    C->>GC: Fetch committed offset<br/>for partition-2
+
+    GC->>CO: Lookup committed offset
+
+    CO-->>GC: Last committed offset = 101
+
+    GC-->>C: Start reading from offset 101
+
+    end
+
+    rect rgb(242, 229, 188)
+
+    Note over C,LB: Message Consumption Phase
+
+    C->>LB: FetchRequest(offset=101, maxBytes=200)
+
+    LB-->>C: Events 101-150
+
+    loop Poll Loop
+        C->>C: Process messages
+
+        C->>GC: Commit offset 150
+
+        GC->>CO: Append committed offset
+        CO->>ISR: Replicate offset commit
+        ISR-->>CO: Ack replication
+
+        GC-->>C: Offset commit success
+
+        C->>LB: Poll again from offset 151
+
+        LB-->>C: Next batch of events
+    end
+
+    end
+`} />
+
+
+# Kafka is Poll-Based
+
+Kafka consumers continuously poll.
+
+Flow:
+
+```text
+Fetch batch
+Process batch
+Commit offset
+Poll again
+```
+
+Example:
+
+```text
+Fetch from 502
+Return next 200 bytes
+```
+
+This loop continues forever.
+
+
+# Log Retention and Cleanup
+
+Kafka keeps appending events forever unless cleanup policies remove old data.
+
+There are two major cleanup policies.
+
+
+## Delete Policy
+
+Default policy:
+
+```properties
+cleanup.policy=delete
+```
+
+Kafka deletes old segments based on Time and Size
+
+Example:
+
+```properties
+retention.ms=7days
+retention.bytes=1GB
+```
+
+Note that retention works at the **segment level**, not per message. If a segment becomes older than retention time, delete the entire segment. If total partition size exceeds configured limit, delete oldest segments first.
+
+
+## Log Compaction
+
+Compaction keeps only the latest value for a key.
+
+Configuration:
+
+```properties
+cleanup.policy=compact
+```
+
+Example log:
+
+| Offset | Key   | Value |
+| ------ | ----- | ----- |
+| 100    | user1 | v1    |
+| 101    | user2 | v1    |
+| 102    | user1 | v2    |
+| 103    | user3 | v1    |
+| 104    | user2 | v2    |
+
+After compaction:
+
+| Key   | Latest Value |
+| ----- | ------------ |
+| user1 | v2           |
+| user2 | v2           |
+| user3 | v1           |
+
+Older values are eventually removed asynchronously.
+
+
+# Why Kafka is Fast
+
+Kafka reads and writes from disk. Isn't disk slow? Kafka achieves very high throughput using several optimizations.
+
+
+## Write Optimization: Page Cache
+
+Kafka does not synchronously write every request directly to disk. Instead, data first enters OS page cache (RAM). The OS asynchronously flushes to disk. This avoids blocking disk waits.
+
+## Sequential Writes
+
+Kafka logs are append-only. So writes are always sequential. Sequential disk writes are dramatically faster than random writes.
+
+Kafka never:
+
+* updates records in place
+* inserts in the middle
+* modifies older events
+
+It only appends.
+
+
+## Read Optimization: Zero Copy
+
+Normally data flow looks like:
+
+```text
+Disk → OS Page Cache → JVM/User Space → Network
+```
+
+Kafka optimizes this using the `sendfile()` system call.
+
+With zero-copy:
+
+```text
+Disk → OS Page Cache → Network
+```
+
+Kafka skips copying data into JVM user space.
+
+Benefits:
+
+* fewer memory copies
+* lower CPU usage
+* lower latency
+* higher throughput
